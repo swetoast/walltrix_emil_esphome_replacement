@@ -54,8 +54,8 @@ Everything happens in one window.
     name, LED hardware, flashing, WiFi and keys. The hardware is one preset,
     EnergiKlockan EMIL (GPIO12, 36 LEDs, bit_bang, GRB). Open Custom
     hardware to change the raw values.
-- **Right.** A live preview of the ring. Home Assistant renders the template,
-  so the preview is exactly what the clock will show.
+- **Right.** A live preview of the ring. At the current time Home Assistant
+  renders the template, so the preview is exactly what the clock shows.
 
 ### The preview
 
@@ -85,9 +85,49 @@ Everything happens in one window.
 Numbers use a gradient bar. Click a dot on the bar to change that colour, or
 pick a preset: cheap to expensive, green to red, cold to hot, or colour-blind
 safe.
+
 States use a table: a colour swatch, the state value and a definition in plain
 words. **Fetch states from Home Assistant** fills in the values the entity
 actually reports.
+
+### Starter clocks
+
+| Starter | Entity it starts with | Layout |
+| --- | --- | --- |
+| Electricity price | `sensor.swedish_spot_price_elpris_se3_forecast` | Timeline, 15-minute prices |
+| Weather | `sensor.weather_hourly` | States, one LED per hour |
+| Temperature | `sensor.outdoor_temperature` | Gauge, -20 to 30, cold to hot |
+| Battery | `sensor.phone_battery_level` | Gauge, 0 to 100, red to green |
+| Calendar | `calendar.home` | State, busy red, free green |
+| Blank | none | Timeline |
+
+Change the entity to your own after adding the clock.
+
+The Weather starter colours every Home Assistant weather state. The colours are
+picked for WS2812 LEDs: warm colours for dry daytime, blues for rain (deeper
+for heavier), whites and cyans for snow and ice, purple for thunder, green for
+wind, and red only for exceptional weather.
+
+| State | Shown as | Colour |
+| --- | --- | --- |
+| sunny | Sunny | `#FFB000` |
+| clear-night | Clear night | `#3020A0` |
+| partlycloudy | Partly cloudy | `#FFE6A0` |
+| cloudy | Cloudy | `#8090B0` |
+| fog | Fog | `#C8C0B0` |
+| rainy | Rain | `#0064FF` |
+| pouring | Heavy rain | `#0010FF` |
+| snowy | Snow | `#E0F0FF` |
+| snowy-rainy | Sleet | `#80D0FF` |
+| hail | Hail | `#40FFE0` |
+| lightning | Thunder | `#A000FF` |
+| lightning-rainy | Thunder and rain | `#6000FF` |
+| windy | Windy | `#00D090` |
+| windy-variant | Windy and cloudy | `#40A090` |
+| exceptional | Exceptional | `#FF2000` |
+
+LEDs never match a screen exactly. Use **Send this to the clock** to check
+colours on the wall.
 
 ## Flashing
 
@@ -104,7 +144,8 @@ would make the flash fail and links straight to the fix.
    and takes a few minutes.
 4. After that, use **Update over the air**. No cable needed.
 
-**Restore stock** writes the backup back to the clock.
+**Restore stock** writes the backup back to the clock. It is greyed out until
+a backup exists.
 
 Every job shows as a list of steps that tick off as they finish, with a
 progress bar. **Show details** opens the full output. If a step fails, the
@@ -137,9 +178,24 @@ Files it writes:
     config/secrets.yaml                     WiFi and keys
     homeassistant/ha_<name>_ring.yaml       template sensor
     homeassistant/automation.yaml           adaptive brightness
+    <packages folder>/ring_studio.yaml      everything for Home Assistant in one file
 
 Keys are generated only when they are missing, or when you press Generate in
 WiFi and keys. An existing key is never replaced on export.
+
+## What the firmware has
+
+Each clock's ESPHome config contains:
+
+- **The ring light** with two effects: the one that shows Home Assistant's
+  colours (named after the clock, for example Price Ring) and Rainbow Test.
+  Identify uses Rainbow Test.
+- **Ring Brightness**, a number the brightness automation sets.
+- **ESPHome Version**, a sensor the app reads to show the firmware version.
+  Clocks flashed before this sensor existed need one update over the air
+  before the version shows.
+- Home Assistant time, the encrypted API, OTA updates, and a fallback hotspot
+  named after the clock if WiFi is unavailable.
 
 ## Keyboard
 
