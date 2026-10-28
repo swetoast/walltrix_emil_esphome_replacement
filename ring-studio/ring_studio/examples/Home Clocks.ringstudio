@@ -1,0 +1,169 @@
+# Ring Studio project. Notes live here and are never exported. Secrets are never stored here.
+ring_studio: 1
+name: Home Clocks
+note: 'Two clocks: electricity prices in the hallway and the weather forecast in the kitchen. Open this, change
+  the entities to yours, then export.'
+brightness:
+  follow_the_sun: true
+  off_from_hour: 23
+  on_at_hour: 6
+  dimmest: 10
+  brightest: 90
+  dimmest_at_sun_angle: -6.0
+  brightest_at_sun_angle: 30.0
+  clocks:
+  - price_clock
+  - weather_clock
+clocks:
+- name: price_clock
+  display_name: Price Clock
+  effect: Price Ring
+  note: Spot prices for price area SE3 from the Swedish Spot Price integration, one LED per 15 minutes. Blue is
+    cheap, red is expensive, white means below zero. Change the entity for another price area.
+  hardware:
+    board: esp12e
+    data_pin: GPIO12
+    driver: bit_bang
+    led_type: WS2812
+    colour_order: GRB
+    gamma: 1.0
+    leds: 36
+    max_brightness: 90
+    start_brightness: 40
+  shows:
+    layout: timeline
+    entity: sensor.swedish_spot_price_elpris_se3_forecast
+    list_attributes:
+    - today
+    - tomorrow
+    item_key: SEK_per_kWh
+    start_time_key: time_start
+    end_time_key: time_end
+    multiply_by: 100.0
+    low: 0.0
+    high: 100.0
+    now_marker: bright
+    other_leds: 0.55
+    led_at_12_oclock: 0
+    clockwise: true
+    dial: ''
+    palette:
+    - '#00BFFF'
+    - '#0070FF'
+    - '#0040FF'
+    - '#4000FF'
+    - '#8000FF'
+    - '#B000FF'
+    - '#FF00FF'
+    - '#FF0080'
+    - '#FF0040'
+    below_range: '#FFFFFF'
+    unknown_state: '#646464'
+    no_data: '#000000'
+    states: {}
+- name: weather_clock
+  display_name: Weather Clock
+  effect: Weather Ring
+  note: 'Hourly forecast from sensor.weather_hourly on a 24-hour dial: midnight at the top and every hour in its
+    own place, showing the next 24 hours. Warm colours are dry daytime, blues are rain, whites and cyans are snow
+    and ice, purple is thunder, green is wind, red is exceptional.'
+  hardware:
+    board: esp12e
+    data_pin: GPIO12
+    driver: bit_bang
+    led_type: WS2812
+    colour_order: GRB
+    gamma: 1.0
+    leds: 36
+    max_brightness: 90
+    start_brightness: 40
+  shows:
+    layout: states
+    entity: sensor.weather_hourly
+    list_attributes:
+    - forecast
+    item_key: condition
+    start_time_key: datetime
+    end_time_key: ''
+    multiply_by: 1.0
+    low: 0.0
+    high: 100.0
+    now_marker: bright
+    other_leds: 0.4
+    led_at_12_oclock: 0
+    clockwise: true
+    dial: 24h
+    palette:
+    - '#00BFFF'
+    - '#0070FF'
+    - '#0040FF'
+    - '#4000FF'
+    - '#8000FF'
+    - '#B000FF'
+    - '#FF00FF'
+    - '#FF0080'
+    - '#FF0040'
+    below_range: null
+    unknown_state: '#646464'
+    no_data: '#000000'
+    states:
+      sunny:
+        colour: '#FFB000'
+        means: Sunny
+        note: ''
+      clear-night:
+        colour: '#3020A0'
+        means: Clear night
+        note: Kept fairly bright so it still shows when the ring is dimmed at night.
+      partlycloudy:
+        colour: '#FFE6A0'
+        means: Partly cloudy
+        note: ''
+      cloudy:
+        colour: '#8090B0'
+        means: Cloudy
+        note: ''
+      fog:
+        colour: '#C8C0B0'
+        means: Fog
+        note: ''
+      rainy:
+        colour: '#0064FF'
+        means: Rain
+        note: ''
+      pouring:
+        colour: '#0010FF'
+        means: Heavy rain
+        note: ''
+      snowy:
+        colour: '#E0F0FF'
+        means: Snow
+        note: ''
+      snowy-rainy:
+        colour: '#80D0FF'
+        means: Sleet
+        note: ''
+      hail:
+        colour: '#40FFE0'
+        means: Hail
+        note: ''
+      lightning:
+        colour: '#A000FF'
+        means: Thunder
+        note: ''
+      lightning-rainy:
+        colour: '#6000FF'
+        means: Thunder and rain
+        note: ''
+      windy:
+        colour: '#00D090'
+        means: Windy
+        note: ''
+      windy-variant:
+        colour: '#40A090'
+        means: Windy and cloudy
+        note: ''
+      exceptional:
+        colour: '#FF2000'
+        means: Exceptional
+        note: Rare. Red is kept for this alone so it stands out.
