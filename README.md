@@ -1,15 +1,15 @@
-# Walltrix Emil Clock: ESPHome firmware replacement
+# EMIL ring clock: local ESPHome firmware
 
-Replacement firmware for the Walltrix Emil clock and its ring of 36 LEDs. The clock runs ESPHome and gets everything it shows from your own Home Assistant over the local network. 
+Replacement firmware for the EMIL wall clock and its ring of 36 LEDs. The clock runs ESPHome and gets everything it shows from your own Home Assistant over the local network. It uses no cloud service and has no hardcoded credentials.
 
 Home Assistant works out one colour per LED and the clock draws them. What the ring means (prices, weather, daylight, anything else) is decided by a Home Assistant package, so you can change it without touching the firmware.
 
 ## Examples
 
-| Example | Shows | Data from | Default span |
+| Example | Shows | Data from | Ring |
 |---|---|---|---|
-| [Price Clock](examples/price-clock/) | Electricity spot price | A price sensor with 15 minute slots | Next 9 hours, 15 min per LED |
-| [Weather Clock](examples/weather-clock/) | Condition, temperature, rain or daylight | `weather.forecast_home` and `sun.sun`, both in a default Home Assistant install | Next 36 hours, 1 hour per LED |
+| [Price Clock](examples/price-clock/) | Electricity spot price | A price sensor with 15 minute slots | 60 minutes, 15 minutes = 9 LEDs |
+| [Weather Clock](examples/weather-clock/) | Condition, temperature, rain or daylight | `weather.forecast_home` and `sun.sun`, both in a default Home Assistant install | 12 hours, 1 hour = 3 LEDs |
 
 Both examples run on the same hardware. Each example folder has its ESPHome config, its Home Assistant package and a README explaining what it shows.
 
@@ -23,7 +23,7 @@ Both examples run on the same hardware. Each example folder has its ESPHome conf
 
 **Guides**
 1. [How the ring works](docs/guides/01-how-the-ring-works.md)
-2. [Time slots and LED layout](docs/guides/02-timeslots-and-layout.md)
+2. [Time on the ring](docs/guides/02-time-on-the-ring.md)
 3. [Colours](docs/guides/03-colours.md)
 4. [Brightness and night mode](docs/guides/04-brightness-and-night.md)
 5. [Make your own ring](docs/guides/05-make-your-own-ring.md)
@@ -44,7 +44,7 @@ Both examples run on the same hardware. Each example folder has its ESPHome conf
 ├── README.md
 ├── docs/
 │   ├── getting-started/        Hardware, backup, flashing, Home Assistant
-│   ├── guides/                 Time slots, colours, brightness, your own ring
+│   ├── guides/                 Time on the ring, colours, brightness, your own ring
 │   ├── reference/              Every entity and every package setting
 │   ├── troubleshooting.md
 │   └── upgrading.md

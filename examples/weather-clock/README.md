@@ -1,6 +1,6 @@
 # Weather Clock
 
-Shows the weather for the coming hours, using only what a default Home Assistant install provides: the Met.no forecast and the Sun integration. No extra integrations or helper sensors are needed.
+Shows the weather for the coming 12 hours, 3 LEDs per hour, using only what a default Home Assistant install provides: the Met.no forecast and the Sun integration. No extra integrations or helper sensors are needed.
 
 ## Files
 
@@ -20,7 +20,16 @@ Met.no names the weather entity after the location name chosen during setup. If 
 
 ## Four rings
 
-Pick one with the Ring Mode select on the clock's device page. With default settings each LED is one hour: LED 0 is the current hour at full brightness and LEDs 1 to 35 are the next 35 hours at 40 percent.
+Pick one with the Ring Mode select on the clock's device page.
+
+All four rings are 12 hours, read like the hour hand. One forecast hour is 3 LEDs:
+
+- Each hour lights the 3 LEDs at its place on the face: 07:00 to 08:00 lights the 3 LEDs from the 7 to the 8.
+- An hour that has ended shows the same hour 12 hours later, so the ring always holds the coming 12 hours.
+- The current hour is at full brightness, the rest at 40 percent.
+- Met.no's forecast usually starts at the next full hour. The current hour then uses that first forecast hour, so it does not go dark.
+
+For the hours to sit under the right numerals, set `led_offset` and `clockwise` for your clock, see [Time on the ring](../../docs/guides/02-time-on-the-ring.md#line-the-face-up-with-your-clock).
 
 ### Condition
 
@@ -85,14 +94,15 @@ The part of the day at each LED's time:
 | Day | sunrise | sunset | Amber `#FFB400` |
 | Evening | sunset | dusk | Purple `#8C28C8` |
 
-With 36 hourly LEDs the sun ring shows a day and a half, so you see tonight, tomorrow's daylight and the next evening.
+The sun ring shows where night, dawn, daylight and dusk fall over the next 12 hours, each at its place on the face.
 
 ## Common changes
 
 | Want | Change |
 |---|---|
-| Next 9 hours in 15 minute steps | `slot_minutes: 15` |
-| Read the ring like the clock face | `layout: clock` plus `led_offset` and `clockwise`, see [Time slots and LED layout](../../docs/guides/02-timeslots-and-layout.md#the-clock-layout) |
+| Line the hours up with the numerals | `led_offset` and `clockwise`, see [Time on the ring](../../docs/guides/02-time-on-the-ring.md#line-the-face-up-with-your-clock) |
+| 2 hours per 6 LEDs | `interval_minutes: 120` |
+| Other combinations | See [Time on the ring](../../docs/guides/02-time-on-the-ring.md#intervals-and-leds) |
 | Different colours | Edit the lists in `variables:`, see [Colours](../../docs/guides/03-colours.md) |
 | Start on another ring after a power cut | Change `initial_option` of Ring Mode in `weather-clock.yaml` |
 

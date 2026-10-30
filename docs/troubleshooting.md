@@ -47,7 +47,7 @@ to `RGB` and install. If colours are still wrong, try `BRG`.
 
 ## The ring looks rotated
 
-Only relevant for the `clock` layout. The package's `led_offset` or `clockwise` does not match your unit. Use the LED Index Test effect as described in [Time slots and LED layout](guides/02-timeslots-and-layout.md#find-led-0-and-the-direction).
+The package's `led_offset` or `clockwise` does not match your clock. Use the LED Index Test effect as described in [Time on the ring](guides/02-time-on-the-ring.md#line-the-face-up-with-your-clock).
 
 ## The clock is not discovered
 

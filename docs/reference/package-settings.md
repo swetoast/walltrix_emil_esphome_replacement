@@ -1,6 +1,6 @@
 # Package settings
 
-Every setting in the `variables:` section of the example packages. The guides explain them with examples: [Time slots and LED layout](../guides/02-timeslots-and-layout.md) and [Colours](../guides/03-colours.md).
+Every setting in the `variables:` section of the example packages. The guides explain them with examples: [Time on the ring](../guides/02-time-on-the-ring.md) and [Colours](../guides/03-colours.md).
 
 After editing, reload with Developer tools > YAML > Template entities.
 
@@ -8,12 +8,12 @@ After editing, reload with Developer tools > YAML > Template entities.
 
 | Setting | Type | Price Clock default | Weather Clock default | Description |
 |---|---|---|---|---|
-| `layout` | `now` or `clock` | `now` | `now` | How LEDs map to time |
-| `slot_minutes` | whole minutes | `15` | `60` | Minutes per LED in the `now` layout. Use 5, 10, 15, 20, 30 or 60. Ignored by `clock`. |
-| `led_offset` | 0 to 35 | `0` | `0` | `clock` layout: the LED under 12 o'clock |
-| `clockwise` | `true` or `false` | `true` | `true` | `clock` layout: LED numbers increase clockwise |
-| `dim_others` | 0.0 to 1.0 | `0.55` | `0.4` | Brightness factor for every LED except the one showing now |
-| `no_data_color` | colour | `"#000000"` | `"#000000"` | LEDs whose time has no data |
+| `layout` | `minutes` or `hours` | `minutes` | `hours` | The full ring is 60 minutes or 12 hours |
+| `interval_minutes` | `minutes`: 15 or 30. `hours`: 60, 120, 180 or 360 | `15` | `60` | Length of one interval: 9, 18, 3, 6, 9 or 18 LEDs |
+| `led_offset` | 0 to 35 | `0` | `0` | The LED under 12 o'clock |
+| `clockwise` | `true` or `false` | `true` | `true` | LED numbers go up clockwise |
+| `dim_others` | 0.0 to 1.0 | `0.55` | `0.4` | Brightness factor for every LED outside the current interval |
+| `no_data_color` | colour | `"#000000"` | `"#000000"` | Intervals with no data |
 
 ## Price Clock
 

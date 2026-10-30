@@ -84,20 +84,20 @@ Weather Clock: replace one of the four sources instead, for example the Sun ring
 
 Install the updated firmware over WiFi.
 
-## Step 4: add time slots
+## Step 4: add time
 
 To make each LED show a different time, reuse the time slot block from an example package. Every example sensor contains the same loop:
 
 ```jinja
 {%- for i in range(36) -%}
-  {#- 1. work out the time t for LED i (layout, slot_minutes, led_offset, clockwise) -#}
+  {#- 1. work out the interval t for LED i (layout, interval_minutes, led_offset, clockwise) -#}
   {#- 2. look up your data at time t -#}
   {#- 3. turn it into a colour -#}
   {#- 4. dim it unless is_now -#}
 {%- endfor -%}
 ```
 
-Copy the whole loop from the Weather Clock temperature sensor and change only step 2, the lookup, to read your own data. Steps 1, 3 and 4 then keep working with the same `variables:` settings described in [Time slots and LED layout](02-timeslots-and-layout.md) and [Colours](03-colours.md).
+Copy the whole loop from the Weather Clock temperature sensor and change only step 2, the lookup, to read your own data. Steps 1, 3 and 4 then keep working with the same `variables:` settings described in [Time on the ring](02-time-on-the-ring.md) and [Colours](03-colours.md).
 
 ## Step 5: check it
 

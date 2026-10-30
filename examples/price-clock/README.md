@@ -1,6 +1,6 @@
 # Price Clock
 
-Shows the electricity spot price for the coming hours. Cheap periods are blue, expensive ones pink, so you can see at a glance when to run the dishwasher.
+Shows the electricity spot price for the coming 60 minutes, one 15 minute price per quarter of the face. Cheap prices are blue, expensive ones pink.
 
 ## Files
 
@@ -11,12 +11,18 @@ Shows the electricity spot price for the coming hours. Cheap periods are blue, e
 
 ## What the ring shows
 
-With the default settings:
+The ring is 60 minutes, read like the minute hand. One 15 minute price is 9 LEDs:
 
-- LED 0 is the current 15 minute price slot, at full brightness.
-- LEDs 1 to 35 are the following 35 slots, dimmed to 55 percent.
-- Together they cover the next 9 hours.
-- LEDs after the last known price stay off. In the afternoon, before tomorrow's prices are published, the end of the ring can be dark.
+| On the face | LEDs | Price |
+|---|---|---|
+| 12 to 3 | 1 to 9 | :00 to :15 |
+| 3 to 6 | 10 to 18 | :15 to :30 |
+| 6 to 9 | 19 to 27 | :30 to :45 |
+| 9 to 12 | 28 to 36 | :45 to :00 |
+
+- The current 15 minutes are at full brightness, the rest at 55 percent.
+- A quarter that has ended shows the same quarter of the next hour, so the ring always holds the coming 60 minutes.
+- For the quarters to start at 12 o'clock, set `led_offset` and `clockwise` for your clock, see [Time on the ring](../../docs/guides/02-time-on-the-ring.md#line-the-face-up-with-your-clock).
 
 | Price (öre/kWh) | Colour |
 |---|---|
@@ -46,9 +52,9 @@ The default, `sensor.swedish_spot_price_elpris_se3_forecast`, is the SE3 forecas
 
 | Want | Change |
 |---|---|
-| Cover 12 hours | `slot_minutes: 20` |
-| Cover 36 hours with hourly LEDs | `slot_minutes: 60` (each LED shows the first 15 minutes of its hour) |
-| Read the ring like the clock face | `layout: clock` plus `led_offset` and `clockwise`, see [Time slots and LED layout](../../docs/guides/02-timeslots-and-layout.md#the-clock-layout) |
+| 30 minutes per 18 LEDs, average of two prices | `interval_minutes: 30` |
+| 12 hours, 1 hour per 3 LEDs, average of four prices | `layout: hours`, `interval_minutes: 60` |
+| Other combinations | See [Time on the ring](../../docs/guides/02-time-on-the-ring.md#intervals-and-leds) |
 | Different price range | Edit the values in `price_colors` |
 | No highlight on now | `dim_others: 1.0` |
 | Another price area | Point `price_entity` at its sensor, for example the SE4 one |

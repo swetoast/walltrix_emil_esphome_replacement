@@ -17,11 +17,14 @@ In a terminal with colour support, each ring is drawn as a row of 36 coloured bl
 
 | Scenario | Expected |
 |---|---|
-| Price Clock, `now` and `clock` layouts | 216 hex characters |
-| Price Clock in the evening without tomorrow's prices | LEDs past the last price use `no_data_color` |
+| Both packages, every ring, every allowed `layout` and `interval_minutes` | 216 hex characters, and each interval's LEDs (9, 18, 3, 6, 9 or 18) are one colour |
+| Price Clock default at 07:23 | 12 to 3 is 08:00, 3 to 6 is 07:15 and the only bright quarter, 6 to 9 is 07:30, 9 to 12 is 07:45 |
+| Price Clock with 30 minutes at 07:23 | 12 to 6 is the average of 07:00 and 07:15, 6 to 12 the average of 07:30 and 07:45 |
+| Price Clock at 23:50 without tomorrow's prices | 12 to 3 (00:00) uses `no_data_color` |
 | Price Clock without its price sensor | Sensor unavailable |
-| Weather Clock, all four rings, `now`, `clock` and 15 minute slots | 216 hex characters each |
-| Weather Clock with only 10 forecast hours | LEDs past the forecast use `no_data_color` |
+| Weather Clock default at 07:23 | The 3 LEDs from the 7 to the 8 are 07:00 and bright, the 3 from the 8 to the 9 are 08:00 and dimmed |
+| Weather Clock when the forecast starts at the next hour | The current hour does not go dark |
+| Weather Clock with only 5 forecast hours | 18:00 (6 to 7) uses `no_data_color` |
 | Weather Clock when the forecast call failed | Forecast rings unavailable, Sun ring still works |
 
 The script exits with an error if any check fails.

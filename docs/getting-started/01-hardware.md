@@ -14,11 +14,11 @@ The firmware targets the EMIL wall clock. Opening the clock is not needed: every
 
 ## The LED ring
 
-The 36 LEDs sit behind the dial, three per hour mark. That makes each LED worth 20 minutes on a 12 hour dial. This matters for the `clock` layout described in [Time slots and LED layout](../guides/02-timeslots-and-layout.md).
+The 36 LEDs sit behind the dial, 9 per quarter of the face. Read with the hour hand that is 3 LEDs per hour; read with the minute hand it is 9 LEDs per 15 minutes. See [Time on the ring](../guides/02-time-on-the-ring.md).
 
-The LEDs are numbered 0 to 35 in the order the data travels along the strip. Which numeral LED 0 sits under, and whether the numbers run clockwise, depends on the unit. The firmware's LED Index Test effect shows both; see [Time slots and LED layout](../guides/02-timeslots-and-layout.md#find-led-0-and-the-direction).
+The LEDs are numbered 0 to 35 in the order the data travels along the strip. Which numeral LED 0 sits under, and whether the numbers run clockwise, depends on the unit. The firmware's LED Index Test effect shows both; see [Time on the ring](../guides/02-time-on-the-ring.md#line-the-face-up-with-your-clock).
 
-## Limits worth knowing
+## Limits
 
 - **Memory.** The ESP8266 has only a few tens of kilobytes of free RAM while running. The examples are sized to fit with room to spare, and the Free Heap, Largest Free Block and Heap Fragmentation sensors let you watch it.
 - **Saved settings.** By default saved settings survive a restart but not a power cut. See [Brightness and night mode](../guides/04-brightness-and-night.md#settings-after-a-power-cut).

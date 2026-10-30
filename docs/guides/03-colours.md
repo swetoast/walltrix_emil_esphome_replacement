@@ -130,14 +130,14 @@ Keep the names exactly as shown. The colours are yours to change.
       dim_others: 0.55
 ```
 
-The LED showing now is drawn at full colour. Every other LED is multiplied by `dim_others`:
+The LEDs of the current interval are drawn at full colour. Every other LED is multiplied by `dim_others`:
 
 | `dim_others` | Effect |
 |---|---|
 | `1.0` | No highlight, all LEDs equal |
 | `0.55` | Others at 55 percent (Price Clock default) |
 | `0.4` | Others at 40 percent (Weather Clock default) |
-| `0.0` | Only the now LED is lit |
+| `0.0` | Only the current interval is lit |
 
 ## Colours that do not look right
 

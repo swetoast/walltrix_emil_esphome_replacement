@@ -60,6 +60,6 @@ which reuses the API encryption key. A clock still running the password build ma
 
 The earlier Weather Clock read a custom `sensor.weather_hourly` with a `forecast` attribute. The new package calls `weather.get_forecasts` on `weather.forecast_home` directly, so that helper sensor is no longer needed. The condition colours are unchanged.
 
-## Behaviour that stayed the same
+## How the ring reads now
 
-With default settings, the Price Clock ring looks the same as before: 15 minute slots, the current slot first at full brightness, the rest at 55 percent, the same colour scale. Each LED can differ from the old output by at most 1 step out of 255 per colour channel, from rounding. The Weather Clock condition ring gives the same output as before for the same forecast.
+Both clocks now read like the clock face. The Price Clock ring is 60 minutes with 9 LEDs per 15 minute price, and the Weather Clock ring is 12 hours with 3 LEDs per forecast hour. The earlier builds counted LEDs from now. The colours are unchanged.
