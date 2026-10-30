@@ -1,0 +1,346 @@
+# Weather Clock: weather and daylight rings
+#
+# Home Assistant package. Copy this file to /config/packages/ and make sure
+# configuration.yaml loads packages (see docs/getting-started/04-home-assistant.md).
+#
+# Uses only what a default Home Assistant install provides:
+#   weather.forecast_home  Met.no, set up during onboarding
+#   sun.sun                Sun, part of default_config
+#
+# Creates four sensors, each 216 hex characters (36 LEDs x RRGGBB).
+# The clock's "Ring Mode" select picks which one is shown:
+#   sensor.weather_clock_condition_ring_colors    Condition (sunny, rainy, ...)
+#   sensor.weather_clock_temperature_ring_colors  Temperature
+#   sensor.weather_clock_rain_ring_colors         Rain and snow
+#   sensor.weather_clock_sun_ring_colors          Daylight
+#
+# Everything you are expected to change is in the "variables" section below.
+# docs/guides/ explains every setting with examples.
+
+template:
+  - triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: time_pattern
+        minutes: "/1"
+    variables:
+      # Weather entity to read the hourly forecast from.
+      weather_entity: weather.forecast_home
+
+      # How LEDs map to time:
+      #   now   = LED 0 is the current slot, each next LED is one slot later
+      #   clock = each LED shows the time the hour hand points at it
+      layout: now
+
+      # "now" layout only: minutes per LED. Use 5, 10, 15, 20, 30 or 60.
+      # 36 LEDs x 60 minutes = the next 36 hours.
+      slot_minutes: 60
+
+      # "clock" layout only: which LED sits at 12 o'clock, and whether LED
+      # numbers increase clockwise. Find them with the LED Index Test effect.
+      led_offset: 0
+      clockwise: true
+
+      # Brightness of every LED except the one showing "now".
+      # 1.0 = no dimming, 0.4 = 40 percent.
+      dim_others: 0.4
+
+      # Colour for LEDs beyond the end of the forecast.
+      no_data_color: "#000000"
+
+      # Condition ring: one colour per Home Assistant weather condition.
+      # Conditions not listed use unknown_condition_color.
+      condition_colors:
+        sunny: "#FFD700"
+        clear-night: "#0F2043"
+        partlycloudy: "#C8E1FF"
+        cloudy: "#708090"
+        fog: "#BEBECD"
+        rainy: "#1E90FF"
+        pouring: "#0000CD"
+        snowy: "#F0F8FF"
+        snowy-rainy: "#AA82E6"
+        hail: "#DDA0DD"
+        lightning: "#FF1493"
+        lightning-rainy: "#4B0082"
+        windy: "#40E0D0"
+        windy-variant: "#008B8B"
+        exceptional: "#FF4500"
+      unknown_condition_color: "#646464"
+
+      # Temperature ring: degrees C mapped to a colour. Temperatures between
+      # two steps are blended. Values must go from low to high.
+      temperature_colors:
+        - [-15, "#4000FF"]
+        - [-5, "#0060FF"]
+        - [0, "#00C0FF"]
+        - [5, "#00FFA0"]
+        - [10, "#40FF00"]
+        - [15, "#C0FF00"]
+        - [20, "#FFC000"]
+        - [25, "#FF6000"]
+        - [30, "#FF0000"]
+
+      # Rain ring: precipitation in mm per hour. Each LED takes the colour of
+      # the highest step it reaches (no blending). Values go from low to high.
+      rain_colors:
+        - [0, "#0A0A0A"]
+        - [0.1, "#60A0FF"]
+        - [0.5, "#2060FF"]
+        - [2, "#0020FF"]
+        - [5, "#8000FF"]
+      # Used instead when it rains at least 0.1 mm and it is 0 C or colder.
+      snow_color: "#FFFFFF"
+
+      # Sun ring: one colour per part of the day.
+      #   morning = dawn to sunrise, day = sunrise to sunset,
+      #   evening = sunset to dusk, night = dusk to dawn
+      sun_colors:
+        night: "#001040"
+        morning: "#FF5A1E"
+        day: "#FFB400"
+        evening: "#8C28C8"
+    actions:
+      - action: weather.get_forecasts
+        continue_on_error: true
+        target:
+          entity_id: "{{ weather_entity }}"
+        data:
+          type: hourly
+        response_variable: hourly
+    sensor:
+      - name: "Weather Clock Condition Ring Colors"
+        unique_id: weather_clock_condition_ring_colors
+        icon: mdi:weather-partly-cloudy
+        availability: &forecast_available >
+          {{ hourly is defined and hourly is mapping
+             and weather_entity in hourly
+             and hourly[weather_entity].forecast | count > 0 }}
+        state: >
+          {%- macro scaled(hex, k) -%}
+            {%- set h = hex | string | replace('#', '') -%}
+            {{- '%02X%02X%02X' | format(
+                  ((h[0:2] | int(0, 16)) * k) | int,
+                  ((h[2:4] | int(0, 16)) * k) | int,
+                  ((h[4:6] | int(0, 16)) * k) | int) -}}
+          {%- endmacro -%}
+          {%- set fc = hourly[weather_entity].forecast
+                if hourly is defined and hourly is mapping and weather_entity in hourly
+                else [] -%}
+          {%- if fc | count > 0 -%}
+          {%- set starts = fc | map(attribute='datetime') | map('as_timestamp', 0) | list -%}
+          {%- set n = now() -%}
+          {%- set now_ts = as_timestamp(n) -%}
+          {%- set slot = (slot_minutes | int(60)) * 60 -%}
+          {%- set first = (now_ts // slot) * slot -%}
+          {%- set dial_now = (n.hour % 12) * 60 + n.minute -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {%- if layout == 'clock' -%}
+              {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+              {%- set d = (pos * 20 - dial_now) % 720 -%}
+              {%- if d > 700 -%}{%- set d = d - 720 -%}{%- endif -%}
+              {%- set t = now_ts + d * 60 -%}
+              {%- set is_now = d <= 0 -%}
+            {%- else -%}
+              {%- set t = first + i * slot -%}
+              {%- set is_now = i == 0 -%}
+            {%- endif -%}
+            {%- set hit = namespace(idx=-1) -%}
+            {%- for k in range(starts | count) -%}
+              {%- if starts[k] <= t -%}{%- set hit.idx = k -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if hit.idx < 0 and starts[0] - t < 3600 -%}{%- set hit.idx = 0 -%}{%- endif -%}
+            {%- if hit.idx >= 0 and t >= starts[-1] + 3600 -%}{%- set hit.idx = -1 -%}{%- endif -%}
+            {%- if hit.idx < 0 -%}
+              {%- set col = no_data_color -%}
+            {%- else -%}
+              {%- set col = condition_colors.get(fc[hit.idx].condition, unknown_condition_color) -%}
+            {%- endif -%}
+            {%- set o.s = o.s ~ scaled(col, 1.0 if is_now else dim_others | float(1)) -%}
+          {%- endfor -%}
+          {{ o.s }}
+          {%- endif -%}
+
+      - name: "Weather Clock Temperature Ring Colors"
+        unique_id: weather_clock_temperature_ring_colors
+        icon: mdi:thermometer
+        availability: *forecast_available
+        state: >
+          {%- macro scaled(hex, k) -%}
+            {%- set h = hex | string | replace('#', '') -%}
+            {{- '%02X%02X%02X' | format(
+                  ((h[0:2] | int(0, 16)) * k) | int,
+                  ((h[2:4] | int(0, 16)) * k) | int,
+                  ((h[4:6] | int(0, 16)) * k) | int) -}}
+          {%- endmacro -%}
+          {%- macro gradient(stops, v) -%}
+            {%- set g = namespace(hex=stops[0][1] | string | replace('#', '')) -%}
+            {%- if v >= stops[-1][0] -%}
+              {%- set g.hex = stops[-1][1] | string | replace('#', '') -%}
+            {%- elif v > stops[0][0] -%}
+              {%- for k in range(stops | count - 1) -%}
+                {%- if stops[k][0] <= v < stops[k + 1][0] -%}
+                  {%- set f = (v - stops[k][0]) / (stops[k + 1][0] - stops[k][0]) -%}
+                  {%- set a = stops[k][1] | string | replace('#', '') -%}
+                  {%- set b = stops[k + 1][1] | string | replace('#', '') -%}
+                  {%- set g.hex = '%02X%02X%02X' | format(
+                        ((a[0:2] | int(0, 16)) + ((b[0:2] | int(0, 16)) - (a[0:2] | int(0, 16))) * f) | int,
+                        ((a[2:4] | int(0, 16)) + ((b[2:4] | int(0, 16)) - (a[2:4] | int(0, 16))) * f) | int,
+                        ((a[4:6] | int(0, 16)) + ((b[4:6] | int(0, 16)) - (a[4:6] | int(0, 16))) * f) | int) -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+            {{- g.hex -}}
+          {%- endmacro -%}
+          {%- set fc = hourly[weather_entity].forecast
+                if hourly is defined and hourly is mapping and weather_entity in hourly
+                else [] -%}
+          {%- if fc | count > 0 -%}
+          {%- set starts = fc | map(attribute='datetime') | map('as_timestamp', 0) | list -%}
+          {%- set n = now() -%}
+          {%- set now_ts = as_timestamp(n) -%}
+          {%- set slot = (slot_minutes | int(60)) * 60 -%}
+          {%- set first = (now_ts // slot) * slot -%}
+          {%- set dial_now = (n.hour % 12) * 60 + n.minute -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {%- if layout == 'clock' -%}
+              {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+              {%- set d = (pos * 20 - dial_now) % 720 -%}
+              {%- if d > 700 -%}{%- set d = d - 720 -%}{%- endif -%}
+              {%- set t = now_ts + d * 60 -%}
+              {%- set is_now = d <= 0 -%}
+            {%- else -%}
+              {%- set t = first + i * slot -%}
+              {%- set is_now = i == 0 -%}
+            {%- endif -%}
+            {%- set hit = namespace(idx=-1) -%}
+            {%- for k in range(starts | count) -%}
+              {%- if starts[k] <= t -%}{%- set hit.idx = k -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if hit.idx < 0 and starts[0] - t < 3600 -%}{%- set hit.idx = 0 -%}{%- endif -%}
+            {%- if hit.idx >= 0 and t >= starts[-1] + 3600 -%}{%- set hit.idx = -1 -%}{%- endif -%}
+            {%- if hit.idx < 0 -%}
+              {%- set col = no_data_color -%}
+            {%- else -%}
+              {%- set col = gradient(temperature_colors, fc[hit.idx].temperature | float(0)) -%}
+            {%- endif -%}
+            {%- set o.s = o.s ~ scaled(col, 1.0 if is_now else dim_others | float(1)) -%}
+          {%- endfor -%}
+          {{ o.s }}
+          {%- endif -%}
+
+      - name: "Weather Clock Rain Ring Colors"
+        unique_id: weather_clock_rain_ring_colors
+        icon: mdi:weather-pouring
+        availability: *forecast_available
+        state: >
+          {%- macro scaled(hex, k) -%}
+            {%- set h = hex | string | replace('#', '') -%}
+            {{- '%02X%02X%02X' | format(
+                  ((h[0:2] | int(0, 16)) * k) | int,
+                  ((h[2:4] | int(0, 16)) * k) | int,
+                  ((h[4:6] | int(0, 16)) * k) | int) -}}
+          {%- endmacro -%}
+          {%- set fc = hourly[weather_entity].forecast
+                if hourly is defined and hourly is mapping and weather_entity in hourly
+                else [] -%}
+          {%- if fc | count > 0 -%}
+          {%- set starts = fc | map(attribute='datetime') | map('as_timestamp', 0) | list -%}
+          {%- set n = now() -%}
+          {%- set now_ts = as_timestamp(n) -%}
+          {%- set slot = (slot_minutes | int(60)) * 60 -%}
+          {%- set first = (now_ts // slot) * slot -%}
+          {%- set dial_now = (n.hour % 12) * 60 + n.minute -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {%- if layout == 'clock' -%}
+              {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+              {%- set d = (pos * 20 - dial_now) % 720 -%}
+              {%- if d > 700 -%}{%- set d = d - 720 -%}{%- endif -%}
+              {%- set t = now_ts + d * 60 -%}
+              {%- set is_now = d <= 0 -%}
+            {%- else -%}
+              {%- set t = first + i * slot -%}
+              {%- set is_now = i == 0 -%}
+            {%- endif -%}
+            {%- set hit = namespace(idx=-1) -%}
+            {%- for k in range(starts | count) -%}
+              {%- if starts[k] <= t -%}{%- set hit.idx = k -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if hit.idx < 0 and starts[0] - t < 3600 -%}{%- set hit.idx = 0 -%}{%- endif -%}
+            {%- if hit.idx >= 0 and t >= starts[-1] + 3600 -%}{%- set hit.idx = -1 -%}{%- endif -%}
+            {%- if hit.idx < 0 -%}
+              {%- set col = no_data_color -%}
+            {%- else -%}
+              {%- set mm = fc[hit.idx].precipitation | float(0) -%}
+              {%- set temp = fc[hit.idx].temperature | float(5) -%}
+              {%- set step = namespace(hex=rain_colors[0][1]) -%}
+              {%- for r in rain_colors -%}
+                {%- if mm >= r[0] -%}{%- set step.hex = r[1] -%}{%- endif -%}
+              {%- endfor -%}
+              {%- if mm >= 0.1 and temp <= 0 -%}
+                {%- set col = snow_color -%}
+              {%- else -%}
+                {%- set col = step.hex -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- set o.s = o.s ~ scaled(col, 1.0 if is_now else dim_others | float(1)) -%}
+          {%- endfor -%}
+          {{ o.s }}
+          {%- endif -%}
+
+      - name: "Weather Clock Sun Ring Colors"
+        unique_id: weather_clock_sun_ring_colors
+        icon: mdi:weather-sunset
+        availability: >
+          {{ state_attr('sun.sun', 'next_rising') is not none
+             and state_attr('sun.sun', 'next_setting') is not none }}
+        state: >
+          {%- macro scaled(hex, k) -%}
+            {%- set h = hex | string | replace('#', '') -%}
+            {{- '%02X%02X%02X' | format(
+                  ((h[0:2] | int(0, 16)) * k) | int,
+                  ((h[2:4] | int(0, 16)) * k) | int,
+                  ((h[4:6] | int(0, 16)) * k) | int) -}}
+          {%- endmacro -%}
+          {#- Next time each part of the day starts. The same event happens
+              again every 24 hours, close enough for a 36 LED ring. -#}
+          {%- set events = [
+                ('morning', as_timestamp(state_attr('sun.sun', 'next_dawn'), 0)),
+                ('day', as_timestamp(state_attr('sun.sun', 'next_rising'), 0)),
+                ('evening', as_timestamp(state_attr('sun.sun', 'next_setting'), 0)),
+                ('night', as_timestamp(state_attr('sun.sun', 'next_dusk'), 0))
+              ] -%}
+          {%- set n = now() -%}
+          {%- set now_ts = as_timestamp(n) -%}
+          {%- set slot = (slot_minutes | int(60)) * 60 -%}
+          {%- set first = (now_ts // slot) * slot -%}
+          {%- set dial_now = (n.hour % 12) * 60 + n.minute -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {%- if layout == 'clock' -%}
+              {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+              {%- set d = (pos * 20 - dial_now) % 720 -%}
+              {%- if d > 700 -%}{%- set d = d - 720 -%}{%- endif -%}
+              {%- set t = now_ts + d * 60 -%}
+              {%- set is_now = d <= 0 -%}
+            {%- else -%}
+              {%- set t = first + i * slot -%}
+              {%- set is_now = i == 0 -%}
+            {%- endif -%}
+            {#- The part of the day that started most recently before t -#}
+            {%- set ph = namespace(best=none, part='night') -%}
+            {%- for part, ts in events -%}
+              {%- if ts > 0 -%}
+                {%- set last = ts + ((t - ts) // 86400) * 86400 -%}
+                {%- if ph.best is none or last > ph.best -%}
+                  {%- set ph.best = last -%}
+                  {%- set ph.part = part -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- set o.s = o.s ~ scaled(sun_colors[ph.part], 1.0 if is_now else dim_others | float(1)) -%}
+          {%- endfor -%}
+          {{ o.s }}

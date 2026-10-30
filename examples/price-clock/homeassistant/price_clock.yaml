@@ -1,0 +1,128 @@
+# Price Clock: electricity price ring
+#
+# Home Assistant package. Copy this file to /config/packages/ and make sure
+# configuration.yaml loads packages (see docs/getting-started/04-home-assistant.md).
+#
+# Creates sensor.price_clock_ring_colors: 216 hex characters, one RRGGBB
+# colour per LED, which the clock reads and shows on its 36 LEDs.
+#
+# Everything you are expected to change is in the "variables" section below.
+# docs/guides/ explains every setting with examples.
+
+template:
+  - triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: time_pattern
+        minutes: "/1"
+    variables:
+      # Price sensor with "today" and "tomorrow" attributes. Each item needs
+      # time_start, time_end and SEK_per_kWh.
+      price_entity: sensor.swedish_spot_price_elpris_se3_forecast
+
+      # How LEDs map to time:
+      #   now   = LED 0 is the current slot, each next LED is one slot later
+      #   clock = each LED shows the time the hour hand points at it
+      layout: now
+
+      # "now" layout only: minutes per LED. Use 5, 10, 15, 20, 30 or 60.
+      # 36 LEDs x 15 minutes = the next 9 hours.
+      slot_minutes: 15
+
+      # "clock" layout only: which LED sits at 12 o'clock, and whether LED
+      # numbers increase clockwise. Find them with the LED Index Test effect.
+      led_offset: 0
+      clockwise: true
+
+      # Brightness of every LED except the one showing "now".
+      # 1.0 = no dimming, 0.55 = 55 percent.
+      dim_others: 0.55
+
+      # Colour for LEDs that have no price yet (for example tomorrow's
+      # prices before they are published).
+      no_data_color: "#000000"
+
+      # Price in öre/kWh mapped to a colour. Prices between two steps are
+      # blended. Below the first step uses the first colour, above the last
+      # step uses the last colour. Values must go from low to high.
+      price_colors:
+        - [0, "#00BFFF"]
+        - [12.5, "#0070FF"]
+        - [25, "#0040FF"]
+        - [37.5, "#4000FF"]
+        - [50, "#8000FF"]
+        - [62.5, "#B000FF"]
+        - [75, "#FF00FF"]
+        - [87.5, "#FF0080"]
+        - [100, "#FF0040"]
+    sensor:
+      - name: "Price Clock Ring Colors"
+        unique_id: price_clock_ring_colors
+        icon: mdi:clock-time-four-outline
+        availability: >
+          {{ state_attr(price_entity, 'today') is not none }}
+        state: >
+          {%- macro scaled(hex, k) -%}
+            {%- set h = hex | string | replace('#', '') -%}
+            {{- '%02X%02X%02X' | format(
+                  ((h[0:2] | int(0, 16)) * k) | int,
+                  ((h[2:4] | int(0, 16)) * k) | int,
+                  ((h[4:6] | int(0, 16)) * k) | int) -}}
+          {%- endmacro -%}
+          {%- macro gradient(stops, v) -%}
+            {%- set g = namespace(hex=stops[0][1] | string | replace('#', '')) -%}
+            {%- if v >= stops[-1][0] -%}
+              {%- set g.hex = stops[-1][1] | string | replace('#', '') -%}
+            {%- elif v > stops[0][0] -%}
+              {%- for k in range(stops | count - 1) -%}
+                {%- if stops[k][0] <= v < stops[k + 1][0] -%}
+                  {%- set f = (v - stops[k][0]) / (stops[k + 1][0] - stops[k][0]) -%}
+                  {%- set a = stops[k][1] | string | replace('#', '') -%}
+                  {%- set b = stops[k + 1][1] | string | replace('#', '') -%}
+                  {%- set g.hex = '%02X%02X%02X' | format(
+                        ((a[0:2] | int(0, 16)) + ((b[0:2] | int(0, 16)) - (a[0:2] | int(0, 16))) * f) | int,
+                        ((a[2:4] | int(0, 16)) + ((b[2:4] | int(0, 16)) - (a[2:4] | int(0, 16))) * f) | int,
+                        ((a[4:6] | int(0, 16)) + ((b[4:6] | int(0, 16)) - (a[4:6] | int(0, 16))) * f) | int) -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+            {{- g.hex -}}
+          {%- endmacro -%}
+          {#- Price slots for today and tomorrow -#}
+          {%- set slots = (state_attr(price_entity, 'today') or [])
+                        + (state_attr(price_entity, 'tomorrow') or []) -%}
+          {%- set starts = slots | map(attribute='time_start') | map('as_timestamp', 0) | list -%}
+          {%- set ends = slots | map(attribute='time_end') | map('as_timestamp', 0) | list -%}
+          {#- Time for each LED -#}
+          {%- set n = now() -%}
+          {%- set now_ts = as_timestamp(n) -%}
+          {%- set slot = (slot_minutes | int(15)) * 60 -%}
+          {%- set first = (now_ts // slot) * slot -%}
+          {%- set dial_now = (n.hour % 12) * 60 + n.minute -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {%- if layout == 'clock' -%}
+              {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+              {%- set d = (pos * 20 - dial_now) % 720 -%}
+              {%- if d > 700 -%}{%- set d = d - 720 -%}{%- endif -%}
+              {%- set t = now_ts + d * 60 -%}
+              {%- set is_now = d <= 0 -%}
+            {%- else -%}
+              {%- set t = first + i * slot -%}
+              {%- set is_now = i == 0 -%}
+            {%- endif -%}
+            {#- Find the price slot that contains this time -#}
+            {%- set hit = namespace(idx=-1) -%}
+            {%- for k in range(starts | count) -%}
+              {%- if hit.idx < 0 and starts[k] <= t < ends[k] -%}
+                {%- set hit.idx = k -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- if hit.idx < 0 -%}
+              {%- set col = no_data_color -%}
+            {%- else -%}
+              {%- set col = gradient(price_colors, (slots[hit.idx].SEK_per_kWh | float(0)) * 100) -%}
+            {%- endif -%}
+            {%- set o.s = o.s ~ scaled(col, 1.0 if is_now else dim_others | float(1)) -%}
+          {%- endfor -%}
+          {{ o.s }}

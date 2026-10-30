@@ -1,0 +1,443 @@
+# Weather Clock: ESPHome firmware for the EMIL ring clock
+#
+# Draws one of four rings made by the Home Assistant package
+# homeassistant/weather_clock.yaml. The Ring Mode select picks which:
+#   Condition    sensor.weather_clock_condition_ring_colors
+#   Temperature  sensor.weather_clock_temperature_ring_colors
+#   Rain         sensor.weather_clock_rain_ring_colors
+#   Sun          sensor.weather_clock_sun_ring_colors
+#
+# Needs secrets.yaml with wifi_ssid, wifi_password, ap_password and api_key
+# (see ../../secrets.example.yaml).
+#
+# Docs: docs/getting-started/03-first-flash.md (flashing)
+#       docs/reference/device-entities.md       (every entity below)
+
+substitutions:
+  name: weather-clock
+  friendly_name: "Weather Clock"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - light.turn_on:
+          id: ring
+          brightness: 100%
+          effect: "Weather Ring"
+
+esp8266:
+  board: esp12e
+
+logger:
+  level: WARN
+  baud_rate: 0
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    encryption:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Weather Clock Setup"
+    password: !secret ap_password
+
+captive_portal:
+
+debug:
+  update_interval: 60s
+
+globals:
+  - id: src_hash
+    type: uint32_t[4]
+    initial_value: '{0, 0, 0, 0}'
+  - id: src_changed_ms
+    type: uint32_t[4]
+    initial_value: '{0, 0, 0, 0}'
+  - id: src_seen
+    type: bool[4]
+    initial_value: '{false, false, false, false}'
+
+time:
+  - platform: homeassistant
+    id: ha_time
+    on_time_sync:
+      then:
+        - script.execute: follow_the_sun
+
+text_sensor:
+  - platform: homeassistant
+    id: condition_colors
+    entity_id: sensor.weather_clock_condition_ring_colors
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t h = 2166136261u;
+            for (char c : x) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (!id(src_seen)[0] || h != id(src_hash)[0]) {
+              id(src_hash)[0] = h;
+              id(src_changed_ms)[0] = millis();
+              id(src_seen)[0] = true;
+            }
+        - component.update: ring_data_age
+  - platform: homeassistant
+    id: temperature_colors
+    entity_id: sensor.weather_clock_temperature_ring_colors
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t h = 2166136261u;
+            for (char c : x) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (!id(src_seen)[1] || h != id(src_hash)[1]) {
+              id(src_hash)[1] = h;
+              id(src_changed_ms)[1] = millis();
+              id(src_seen)[1] = true;
+            }
+        - component.update: ring_data_age
+  - platform: homeassistant
+    id: rain_colors
+    entity_id: sensor.weather_clock_rain_ring_colors
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t h = 2166136261u;
+            for (char c : x) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (!id(src_seen)[2] || h != id(src_hash)[2]) {
+              id(src_hash)[2] = h;
+              id(src_changed_ms)[2] = millis();
+              id(src_seen)[2] = true;
+            }
+        - component.update: ring_data_age
+  - platform: homeassistant
+    id: sun_colors
+    entity_id: sensor.weather_clock_sun_ring_colors
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t h = 2166136261u;
+            for (char c : x) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (!id(src_seen)[3] || h != id(src_hash)[3]) {
+              id(src_hash)[3] = h;
+              id(src_changed_ms)[3] = millis();
+              id(src_seen)[3] = true;
+            }
+        - component.update: ring_data_age
+  - platform: version
+    name: "ESPHome Version"
+    hide_timestamp: true
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    ssid:
+      name: "Connected SSID"
+    bssid:
+      name: "Connected BSSID"
+    mac_address:
+      name: "MAC Address"
+  - platform: uptime
+    name: "Uptime Readable"
+    entity_category: diagnostic
+  - platform: debug
+    reset_reason:
+      name: "Last Reset Reason"
+
+binary_sensor:
+  - platform: status
+    name: "Status"
+  - platform: template
+    name: "Ring Data Valid"
+    entity_category: diagnostic
+    lambda: |-
+      size_t m = id(ring_mode).active_index().value_or(0);
+      const std::string &s = m == 1 ? id(temperature_colors).state
+                           : m == 2 ? id(rain_colors).state
+                           : m == 3 ? id(sun_colors).state
+                                    : id(condition_colors).state;
+      return s.length() >= 216;
+
+select:
+  - platform: template
+    name: "Ring Mode"
+    id: ring_mode
+    icon: mdi:circle-slice-8
+    options:
+      - "Condition"
+      - "Temperature"
+      - "Rain"
+      - "Sun"
+    initial_option: "Condition"
+    optimistic: true
+    restore_value: true
+    on_value:
+      - component.update: ring_data_age
+
+switch:
+  - platform: template
+    name: "Auto Brightness"
+    id: auto_brightness
+    icon: mdi:brightness-auto
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      - script.execute: follow_the_sun
+
+number:
+  - platform: template
+    name: "Ring Brightness"
+    id: ring_brightness
+    optimistic: true
+    restore_value: true
+    initial_value: 40
+    min_value: 0
+    max_value: 90
+    step: 1
+    mode: slider
+  - platform: template
+    name: "Night Start Hour"
+    id: night_start
+    icon: mdi:weather-night
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_value: 23
+    min_value: 0
+    max_value: 23
+    step: 1
+    mode: box
+    on_value:
+      - script.execute: follow_the_sun
+  - platform: template
+    name: "Night End Hour"
+    id: night_end
+    icon: mdi:weather-sunny
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_value: 6
+    min_value: 0
+    max_value: 23
+    step: 1
+    mode: box
+    on_value:
+      - script.execute: follow_the_sun
+  - platform: template
+    name: "Auto Brightness Min"
+    id: min_brightness
+    icon: mdi:brightness-4
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_value: 10
+    min_value: 0
+    max_value: 90
+    step: 1
+    mode: slider
+    on_value:
+      - script.execute: follow_the_sun
+  - platform: template
+    name: "Auto Brightness Max"
+    id: max_brightness
+    icon: mdi:brightness-7
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_value: 90
+    min_value: 0
+    max_value: 90
+    step: 1
+    mode: slider
+    on_value:
+      - script.execute: follow_the_sun
+
+button:
+  - platform: restart
+    name: "Restart"
+  - platform: safe_mode
+    name: "Restart (Safe Mode)"
+
+light:
+  - platform: neopixelbus
+    id: ring
+    name: "Ring"
+    variant: WS2812
+    type: GRB
+    pin: GPIO12
+    method:
+      type: bit_bang
+    gamma_correct: 1.0
+    num_leds: 36
+    default_transition_length: 300ms
+    restore_mode: ALWAYS_ON
+    effects:
+      - addressable_lambda:
+          name: "Weather Ring"
+          update_interval: 1s
+          lambda: |-
+            size_t m = id(ring_mode).active_index().value_or(0);
+            const std::string &s = m == 1 ? id(temperature_colors).state
+                                 : m == 2 ? id(rain_colors).state
+                                 : m == 3 ? id(sun_colors).state
+                                          : id(condition_colors).state;
+            if (s.length() < 216)
+              return;
+            auto nib = [](char c) -> uint8_t {
+              if (c >= '0' && c <= '9') return c - '0';
+              if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+              if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+              return 0;
+            };
+            const char *p = s.c_str();
+            float scale = id(ring_brightness).state / 255.0f;
+            for (int i = 0; i < 36; i++) {
+              const char *q = p + i * 6;
+              uint8_t r = (nib(q[0]) << 4) | nib(q[1]);
+              uint8_t g = (nib(q[2]) << 4) | nib(q[3]);
+              uint8_t b = (nib(q[4]) << 4) | nib(q[5]);
+              it[i] = Color((uint8_t)(r * scale), (uint8_t)(g * scale), (uint8_t)(b * scale));
+            }
+      - addressable_rainbow:
+          name: "Rainbow Test"
+      - addressable_lambda:
+          name: "LED Index Test"
+          update_interval: 1s
+          lambda: |-
+            it.all() = Color::BLACK;
+            it[0] = Color(60, 60, 60);
+            it[1] = Color(60, 0, 0);
+            it[2] = Color(0, 60, 0);
+
+sensor:
+  - platform: homeassistant
+    id: sun_elevation
+    entity_id: sun.sun
+    attribute: elevation
+    internal: true
+    on_value:
+      then:
+        - script.execute: follow_the_sun
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    id: wifi_signal_db
+    update_interval: 60s
+  - platform: copy
+    source_id: wifi_signal_db
+    name: "WiFi Signal Percent"
+    unit_of_measurement: "%"
+    entity_category: diagnostic
+    device_class: ""
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+  - platform: uptime
+    name: "Uptime"
+  - platform: debug
+    free:
+      name: "Free Heap"
+    block:
+      name: "Largest Free Block"
+    fragmentation:
+      name: "Heap Fragmentation"
+    loop_time:
+      name: "Loop Time"
+  - platform: template
+    name: "Ring Data Age"
+    id: ring_data_age
+    icon: mdi:timer-sand
+    unit_of_measurement: "min"
+    accuracy_decimals: 0
+    state_class: measurement
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      size_t m = id(ring_mode).active_index().value_or(0);
+      if (m > 3 || !id(src_seen)[m])
+        return {};
+      return (millis() - id(src_changed_ms)[m]) / 60000.0f;
+  - platform: template
+    name: "Ring Power Estimate"
+    icon: mdi:flash
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      auto *out = static_cast<light::AddressableLight *>(id(ring).get_output());
+      uint32_t sum = 0;
+      float bright = 0.0f;
+      if (id(ring).current_values.is_on()) {
+        bright = id(ring).current_values.get_brightness();
+        for (int i = 0; i < out->size(); i++) {
+          Color c = (*out)[i].get();
+          sum += c.r + c.g + c.b;
+        }
+      }
+      // WS2812: about 1 mA idle per LED, about 20 mA per channel at full, 5 V supply
+      float ma = out->size() * 1.0f + (sum / 255.0f) * 20.0f * bright;
+      return ma * 5.0f / 1000.0f;
+
+script:
+  - id: follow_the_sun
+    mode: single
+    then:
+      - lambda: |-
+          if (!id(auto_brightness).state)
+            return;
+          auto now = id(ha_time).now();
+          float elevation = id(sun_elevation).state;
+          if (!now.is_valid() || std::isnan(elevation))
+            return;
+          int start = (int) id(night_start).state;
+          int end = (int) id(night_end).state;
+          bool night;
+          if (start == end)
+            night = false;
+          else if (start > end)
+            night = now.hour >= start || now.hour < end;
+          else
+            night = now.hour >= start && now.hour < end;
+          float lo = id(min_brightness).state;
+          float hi = id(max_brightness).state;
+          if (lo > hi)
+            std::swap(lo, hi);
+          float level;
+          if (night) {
+            level = 0;
+          } else {
+            float f = (elevation - (-6)) / 36;
+            f = f < 0 ? 0 : (f > 1 ? 1 : f);
+            level = lo + (hi - lo) * f;
+          }
+          level = roundf(level);
+          if (level > 90)
+            level = 90;
+          if (id(ring_brightness).state != level) {
+            auto call = id(ring_brightness).make_call();
+            call.set_value(level);
+            call.perform();
+          }
+
+interval:
+  - interval: 60s
+    then:
+      - script.execute: follow_the_sun
