@@ -27,6 +27,7 @@ Both examples run on the same hardware. Each example folder has its ESPHome conf
 3. [Colours](docs/guides/03-colours.md)
 4. [Brightness and night mode](docs/guides/04-brightness-and-night.md)
 5. [Make your own ring](docs/guides/05-make-your-own-ring.md)
+6. [Advanced: alerts, effects, extra sensors and remote control](docs/guides/06-advanced.md)
 
 **Reference**
 - [Device entities](docs/reference/device-entities.md)
@@ -44,7 +45,7 @@ Both examples run on the same hardware. Each example folder has its ESPHome conf
 ├── LICENSE                     MIT
 ├── docs/
 │   ├── getting-started/        Hardware, backup, flashing, Home Assistant
-│   ├── guides/                 Time on the ring, colours, brightness, your own ring
+│   ├── guides/                 Time on the ring, colours, brightness, your own ring, advanced
 │   ├── reference/              Every entity and every package setting
 │   └── troubleshooting.md
 ├── examples/

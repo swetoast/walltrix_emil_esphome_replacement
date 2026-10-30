@@ -106,3 +106,5 @@ Copy the whole loop from the Weather Clock temperature sensor and change only st
 3. On the clock, Ring Data Valid should be on.
 
 The offline checker in [Testing templates offline](../reference/testing.md) can render a package with made-up data before you put it in Home Assistant.
+
+Next: [Advanced](06-advanced.md)
