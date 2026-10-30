@@ -10,6 +10,7 @@ The first flash goes over USB. After that, every update goes over WiFi (OTA).
 | Weather Clock | `examples/weather-clock/esphome/weather-clock.yaml` | `weather-clock` | `Weather Clock Setup` |
 | Sky Clock | `examples/sky-clock/esphome/sky-clock.yaml` | `sky-clock` | `Sky Clock Setup` |
 | AdGuard Clock | `examples/adguard-clock/esphome/adguard-clock.yaml` | `adguard-clock` | `AdGuard Clock Setup` |
+| Holiday Clock | `examples/holiday-clock/esphome/holiday-clock.yaml` | `holiday-clock` | `Holiday Clock Setup` |
 
 To run several clocks, give each one its own `name` and `friendly_name` under `substitutions:` at the top of the config.
 
@@ -43,6 +44,7 @@ esphome run price-clock.yaml
 esphome run weather-clock.yaml
 esphome run sky-clock.yaml
 esphome run adguard-clock.yaml
+esphome run holiday-clock.yaml
 ```
 
 When asked how to upload, choose the serial port (for example `COM4`) and press Enter. The first build takes a few minutes because ESPHome downloads its toolchain.
@@ -63,7 +65,7 @@ If the clock cannot join WiFi, it opens its fallback hotspot. Connect with `ap_p
 
 ## Check the LEDs
 
-Open the clock's Ring light entity in Home Assistant and pick the Rainbow Test effect. All 36 LEDs should cycle through colours. Switch back to the clock's ring effect afterwards (Price Ring, Weather Ring, Sky Ring or AdGuard Ring). The ring stays dark in that effect until the Home Assistant package is installed; that is the next chapter.
+Open the clock's Ring light entity in Home Assistant and pick the Rainbow Test effect. All 36 LEDs should cycle through colours. Switch back to the clock's ring effect afterwards (Price Ring, Weather Ring, Sky Ring, AdGuard Ring or Holiday Ring). The ring stays dark in that effect until the Home Assistant package is installed; that is the next chapter.
 
 ## How OTA updates are protected
 

@@ -23,6 +23,7 @@ PRICE = os.path.join(ROOT, "examples", "price-clock", "homeassistant", "price_cl
 WEATHER = os.path.join(ROOT, "examples", "weather-clock", "homeassistant", "weather_clock.yaml")
 SKY = os.path.join(ROOT, "examples", "sky-clock", "homeassistant", "sky_clock.yaml")
 ADGUARD = os.path.join(ROOT, "examples", "adguard-clock", "homeassistant", "adguard_clock.yaml")
+HOLIDAY = os.path.join(ROOT, "examples", "holiday-clock", "homeassistant", "holiday_clock.yaml")
 
 TZ = ZoneInfo("Europe/Stockholm")
 NOW = dt.datetime(2026, 10, 30, 7, 23, tzinfo=TZ)
@@ -234,6 +235,53 @@ for ratio, blocked in [("0", 0), ("7.89", 3), ("25", 9), ("50", 18), ("100", 36)
     expect(available and leds == ["FF0080"] * blocked + ["00BFFF"] * (36 - blocked),
            f"adguard: {ratio} percent should be {blocked} blocked LEDs")
 expect(not render_package(ADGUARD, NOW)["AdGuard Clock Ring Colors"][0], "adguard: unavailable without AdGuard Home")
+
+# Holiday Clock: a calendar like the Holiday integration's for Sweden, with the de facto category
+HOLIDAYS = [("2026-10-31", "All Saints' Day"), ("2026-12-24", "Christmas Eve"), ("2026-12-25", "Christmas Day"),
+            ("2026-12-26", "Second Day of Christmas"), ("2026-12-31", "New Year's Eve"),
+            ("2027-01-01", "New Year's Day"), ("2027-01-06", "Epiphany"), ("2027-03-26", "Good Friday"),
+            ("2027-03-28", "Easter Sunday"), ("2027-03-29", "Easter Monday"), ("2027-05-01", "May Day")]
+RING = "Holiday Clock Ring"
+
+
+def holiday_cal(names=HOLIDAYS, entity="calendar.sweden"):
+    return {"cal": {entity: {"events": [{"start": d, "end": d, "summary": n, "location": "Sweden"} for d, n in names]}}}
+
+
+def holiday(when, **kwargs):
+    kwargs.setdefault("response", holiday_cal())
+    return render_package(HOLIDAY, dt.datetime(*when, tzinfo=TZ), **kwargs)
+
+
+LINE = re.compile(r"^[a-z]+\|-?\d+\|\d+\|[01]\|[0-9A-F]{6}(,[0-9A-F]{6}){0,9}$")
+for when, want, label in [((2026, 10, 30, 13, 0), "countdown|1|0|1|FF9030", "the day before All Saints' Day counts down 1 LED"),
+                          ((2026, 10, 31, 12, 0), "allsaints|", "All Saints' Day by day"),
+                          ((2026, 10, 31, 19, 0), "halloween|", "Halloween takes over from 18:00"),
+                          ((2026, 12, 1, 9, 0), "countdown|12|0|1|FFE0B0", "12 days to Lucia in her accent colour"),
+                          ((2026, 12, 13, 9, 0), "lucia|", "Lucia from the package"),
+                          ((2026, 12, 24, 15, 0), "jul|", "Christmas Eve"),
+                          ((2026, 12, 31, 23, 0), "newyear|0|", "New Year's Eve"),
+                          ((2027, 2, 9, 10, 0), "semla|", "Shrove Tuesday, 47 days before Easter 2027"),
+                          ((2027, 3, 26, 10, 0), "goodfriday|", "Good Friday"),
+                          ((2027, 4, 30, 20, 0), "valborg|", "Walpurgis Night from the package")]:
+    available, state = holiday(when)[RING]
+    print(f"[holiday] {when}  {state}")
+    expect(available and state.startswith(want), f"holiday: {label}, got {state}")
+    expect(bool(LINE.match(state)) and len(state) <= 255, f"holiday: {label}: malformed line {state}")
+r = holiday((2026, 10, 30, 13, 0))
+expect(r[RING + " next_holiday"][1] == "All Saints' Day" and r[RING + " days_left"][1] == "1",
+       "holiday: attributes name the next day and the days left")
+swedish = holiday_cal([("2026-10-31", "Alla helgons dag")])
+expect(holiday((2026, 10, 31, 12, 0), response=swedish)[RING][1].startswith("allsaints|"), "holiday: Swedish event names")
+for theme in ["New Year", "Epiphany", "Shrove Tuesday", "Good Friday", "Easter", "Walpurgis Night", "May Day",
+              "Ascension Day", "National Day", "Midsummer", "Halloween", "All Saints' Day", "Lucia", "Christmas"]:
+    state = holiday((2026, 7, 15, 10, 0), states={"input_select.holiday_clock_preview": theme})[RING][1]
+    expect(bool(LINE.match(state)) and state.split("|")[1] == "1", f"holiday: preview {theme} gives {state}")
+state = holiday((2026, 7, 15, 10, 0), overrides={"led_offset": 5, "clockwise": False})[RING][1]
+expect(state == "off|0|5|0|000000", "holiday: no themed day within 36 days is off, with offset and direction")
+expect(holiday((2026, 7, 15, 10, 0), overrides={"normal_day": "glow"})[RING][1] == "glow|0|0|1|201810",
+       "holiday: normal_day glow")
+expect(not holiday((2026, 10, 30, 13, 0), response=None)[RING][0], "holiday: unavailable without the calendar")
 
 print()
 if failures:

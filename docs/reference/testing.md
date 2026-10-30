@@ -1,6 +1,6 @@
 # Testing templates offline
 
-`tests/check_packages.py` renders both example packages with made-up prices, forecasts and sun times, without Home Assistant. Use it after editing colours or settings to catch mistakes before reloading Home Assistant.
+`tests/check_packages.py` renders the example packages with made-up prices, forecasts, sun times and holidays, without Home Assistant. Use it after editing colours or settings to catch mistakes before reloading Home Assistant.
 
 ## Run it
 
@@ -34,13 +34,20 @@ In a terminal with colour support, each ring is drawn as a row of 36 coloured bl
 | Sky Clock without the moon details sensor | The five moon detail rings unavailable |
 | AdGuard Clock at 0, 7.89, 25, 50 and 100 percent | 0, 3, 9, 18 and 36 blocked LEDs, the rest allowed |
 | AdGuard Clock without AdGuard Home | Sensor unavailable |
+| Holiday Clock on 30 October, 1 December and 13 December | One LED left to All Saints' Day, 12 LEDs to Lucia in her accent colour, then Lucia |
+| Holiday Clock on 31 October at 12:00 and 19:00 | All Saints' Day by day, Halloween from 18:00 |
+| Holiday Clock on Christmas Eve, New Year's Eve, Good Friday, Walpurgis Night and Shrove Tuesday 2027 | The matching theme. Shrove Tuesday falls 47 days before Easter Sunday |
+| Holiday Clock with Swedish event names | Same themes as with English names |
+| Holiday Clock preview, every theme | A well formed line with value 1 |
+| Holiday Clock in July, with `led_offset` 5 and anticlockwise, and with `normal_day: glow` | `off\|0\|5\|0\|000000`, and `glow\|0\|0\|1\|201810` |
+| Holiday Clock without the calendar | Sensor unavailable |
 
 The script exits with an error if any check fails.
 
 ## Limits
 
-`tests/ha_template_sim.py` is a small stand-in for Home Assistant's template engine. It implements only the functions the packages use (`now`, `state_attr`, `states`, `is_number`, `as_timestamp`, `int` with base, `float` with default) and mimics how Home Assistant turns rendered variables into numbers. Passing here means the templates are logically right. Home Assistant is still the final check: after installing, look at the sensors in Developer tools > States.
+`tests/ha_template_sim.py` is a small stand-in for Home Assistant's template engine. It implements only the functions the packages use (`now`, `today_at`, `state_attr`, `states`, `is_number`, `as_timestamp`, `strptime`, `timedelta`, `int` with base, `float` with default), runs `variables` steps in a package's actions, and mimics how Home Assistant turns rendered variables into numbers and lists. Passing here means the templates are logically right. Home Assistant is still the final check: after installing, look at the sensors in Developer tools > States.
 
 ## Trying your own data
 
-Edit `NOW`, `price_slots()`, `forecast()` or `sun_attributes()` in `check_packages.py` to try other situations, for example negative prices, a heat wave or midsummer sun times.
+Edit `NOW`, `price_slots()`, `forecast()`, `sun_attributes()` or `HOLIDAYS` in `check_packages.py` to try other situations, for example negative prices, a heat wave or midsummer sun times.

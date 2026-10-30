@@ -2,7 +2,7 @@
 
 Replacement firmware for the Walltrix Emil wall clock and its ring of 36 LEDs. The clock runs ESPHome and gets everything it shows from your own Home Assistant over the local network.
 
-Home Assistant works out one colour per LED and the clock draws them. What the ring means (prices, weather, daylight, anything else) is decided by a Home Assistant package, so you can change it without touching the firmware.
+Home Assistant works out one colour per LED and the clock draws them. The Holiday Clock is the exception: Home Assistant picks a theme and the clock animates it. What the ring means (prices, weather, daylight, anything else) is decided by a Home Assistant package, so you can change it without touching the firmware.
 
 ## Examples
 
@@ -12,6 +12,7 @@ Home Assistant works out one colour per LED and the clock draws them. What the r
 | [Weather Clock](examples/weather-clock/) | Condition, temperature or rain | `weather.forecast_home`, in a default Home Assistant install | 12 hours, 1 hour = 3 LEDs |
 | [Sky Clock](examples/sky-clock/) | Night, dawn, day and dusk per hour, moon phase, moonrise and moonset, moon light, moon position, days to full moon | `sun.sun`, `sensor.moon_phase` (Moon integration), and a moon sensor with rise, set and position for the extra moon rings | Sun: 12 hours, 1 hour = 3 LEDs. Moon: a quarter of the moon = 9 LEDs |
 | [AdGuard Clock](examples/adguard-clock/) | Share of DNS queries AdGuard Home blocks | `sensor.adguard_home_dns_queries_blocked_ratio` (AdGuard Home integration) | 100 percent, 25 percent = 9 LEDs |
+| [Holiday Clock](examples/holiday-clock/) | An animated theme on holidays and special days, a countdown to the next one on other days | `calendar.sweden` (Holiday integration) | Animated by the clock, one theme per day |
 
 All examples run on the same hardware. Each example folder has its ESPHome config, its Home Assistant package and a README explaining what it shows.
 
@@ -64,10 +65,14 @@ All examples run on the same hardware. Each example folder has its ESPHome confi
 │   │   ├── README.md
 │   │   ├── esphome/sky-clock.yaml
 │   │   └── homeassistant/sky_clock.yaml
-│   └── adguard-clock/
+│   ├── adguard-clock/
+│   │   ├── README.md
+│   │   ├── esphome/adguard-clock.yaml
+│   │   └── homeassistant/adguard_clock.yaml
+│   └── holiday-clock/
 │       ├── README.md
-│       ├── esphome/adguard-clock.yaml
-│       └── homeassistant/adguard_clock.yaml
+│       ├── esphome/holiday-clock.yaml
+│       └── homeassistant/holiday_clock.yaml
 └── tests/                      Offline check of the Home Assistant templates
 ```
 

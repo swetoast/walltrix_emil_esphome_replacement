@@ -1,0 +1,314 @@
+# Holiday Clock: themed light patterns for holidays and special days
+#
+# Home Assistant package. Copy this file to /config/packages/ and make sure
+# configuration.yaml loads packages (see docs/getting-started/04-home-assistant.md).
+#
+# Needs the Holiday integration (Settings > Devices & services >
+# Add integration > Holiday). Tick the "de facto" category in its options to
+# get Midsummer Eve, Christmas Eve and New Year's Eve.
+#
+# Creates:
+#   sensor.holiday_clock_ring        What the clock should draw today, read
+#                                    by the clock's Holiday Ring effect
+#   input_select.holiday_clock_preview
+#                                    Show any theme now, for trying them out
+#
+# The clock draws the animation itself. This package only decides which
+# theme to show and with which colours, so colours can be changed here
+# without installing new firmware.
+#
+# The sensor's state is one line:
+#   pattern|value|led_offset|clockwise|RRGGBB,RRGGBB,...
+# for example "jul|0|0|1|001A08,FF962D,960010,966928,FFEBBE,FFD278".
+# docs: examples/holiday-clock/README.md
+
+input_select:
+  holiday_clock_preview:
+    name: Holiday Clock Preview
+    icon: mdi:party-popper
+    options:
+      - "Auto"
+      - "New Year"
+      - "Epiphany"
+      - "Shrove Tuesday"
+      - "Good Friday"
+      - "Easter"
+      - "Walpurgis Night"
+      - "May Day"
+      - "Ascension Day"
+      - "National Day"
+      - "Midsummer"
+      - "Halloween"
+      - "All Saints' Day"
+      - "Lucia"
+      - "Christmas"
+
+template:
+  - triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: time_pattern
+        minutes: "/1"
+      - trigger: state
+        entity_id: input_select.holiday_clock_preview
+    variables:
+      # Calendar made by the Holiday integration.
+      holiday_calendar: calendar.sweden
+
+      # Preview selector. "Auto" follows the calendar.
+      preview_entity: input_select.holiday_clock_preview
+
+      # Which LED sits at 12 o'clock, and whether LED numbers increase
+      # clockwise. Find them with the LED Index Test effect.
+      led_offset: 0
+      clockwise: true
+
+      # What the ring shows on days without a theme:
+      #   countdown  LEDs from 12 o'clock, one per day left to the next
+      #              themed day, in that day's accent colour
+      #   glow       every LED in glow_color
+      #   off        dark
+      normal_day: countdown
+      countdown_days: 36
+      glow_color: "#201810"
+
+      # Calendar event name to theme. The Holiday integration names events
+      # in Home Assistant's language, so both English and Swedish names are
+      # listed. Events not listed get no theme.
+      holiday_names:
+        "New Year's Day": newyear
+        "New Year's Eve": newyear
+        "Epiphany": epiphany
+        "Good Friday": goodfriday
+        "Holy Saturday": easter
+        "Easter Sunday": easter
+        "Easter Monday": easter
+        "May Day": mayday
+        "Ascension Day": ascension
+        "National Day": national
+        "Midsummer Eve": midsummer
+        "Midsummer Day": midsummer
+        "All Saints' Day": allsaints
+        "Christmas Eve": jul
+        "Christmas Day": jul
+        "Second Day of Christmas": jul
+        "Nyårsdagen": newyear
+        "Nyårsafton": newyear
+        "Trettondedag jul": epiphany
+        "Långfredagen": goodfriday
+        "Påskafton": easter
+        "Påskdagen": easter
+        "Annandag påsk": easter
+        "Första maj": mayday
+        "Kristi himmelsfärdsdag": ascension
+        "Nationaldagen": national
+        "Midsommarafton": midsummer
+        "Midsommardagen": midsummer
+        "Alla helgons dag": allsaints
+        "Julafton": jul
+        "Juldagen": jul
+        "Annandag jul": jul
+
+      # Days the Holiday integration does not have. Use either
+      #   date: "MM-DD"           the same date every year
+      #   easter_offset: days     days from Easter Sunday (Shrove Tuesday is -47)
+      # A day that falls on a holiday gives way to the holiday, unless it
+      # has from_hour: then it takes over from that hour.
+      extra_days:
+        - name: "Walpurgis Night"
+          date: "04-30"
+          theme: valborg
+        - name: "Halloween"
+          date: "10-31"
+          theme: halloween
+          from_hour: 18
+        - name: "Lucia"
+          date: "12-13"
+          theme: lucia
+        - name: "Shrove Tuesday"
+          easter_offset: -47
+          theme: semla
+
+      # Themes. pattern is the animation the clock draws. colors is the
+      # palette that animation uses, in the order given in the README.
+      # accent is the countdown colour in the days before.
+      themes:
+        newyear:
+          name: "New Year"
+          pattern: newyear
+          accent: "#FFBE3C"
+          colors: ["#FFBE3C", "#FFFFFF", "#FF288C", "#3CAAFF", "#78FF5A", "#C850FF"]
+        epiphany:
+          name: "Epiphany"
+          pattern: epiphany
+          accent: "#FFAA00"
+          colors: ["#03061A", "#FFECB4", "#FFAA00", "#FFE6B4", "#AA2814"]
+        semla:
+          name: "Shrove Tuesday"
+          pattern: semla
+          accent: "#E1A050"
+          colors: ["#FFF4DE", "#965019", "#E1A050", "#D7B482", "#FFFFFF"]
+        goodfriday:
+          name: "Good Friday"
+          pattern: goodfriday
+          accent: "#96000E"
+          colors: ["#96000E"]
+        easter:
+          name: "Easter"
+          pattern: easter
+          accent: "#FFE040"
+          colors: ["#FFE040", "#80FF60", "#FF70B0", "#B080FF"]
+        valborg:
+          name: "Walpurgis Night"
+          pattern: valborg
+          accent: "#FF4600"
+          colors: ["#5A0500", "#FF4600", "#FFBE3C", "#C85A6E", "#283CAA", "#FF9628"]
+        mayday:
+          name: "May Day"
+          pattern: mayday
+          accent: "#EB001C"
+          colors: ["#EB001C", "#960016", "#463424"]
+        ascension:
+          name: "Ascension Day"
+          pattern: ascension
+          accent: "#40A0FF"
+          colors: ["#40A0FF", "#FFFFFF"]
+        national:
+          name: "National Day"
+          pattern: national
+          accent: "#FFC800"
+          colors: ["#0060FF", "#FFC800"]
+        midsummer:
+          name: "Midsummer"
+          pattern: midsummer
+          accent: "#82D237"
+          colors: ["#1E6E0F", "#82D237", "#FFE6AA", "#2846FF", "#FFFFFF", "#FF1E5A", "#FFD200", "#A03CFF", "#FF280A", "#FF6EB4"]
+        halloween:
+          name: "Halloween"
+          pattern: halloween
+          accent: "#FF5500"
+          colors: ["#07000C", "#FF5500", "#50FF8C", "#6EAAFF", "#C80000"]
+        allsaints:
+          name: "All Saints' Day"
+          pattern: allsaints
+          accent: "#FF9030"
+          colors: ["#FF9030"]
+        lucia:
+          name: "Lucia"
+          pattern: lucia
+          accent: "#FFE0B0"
+          colors: ["#FFE0B0", "#FFA028"]
+        jul:
+          name: "Christmas"
+          pattern: jul
+          accent: "#C00018"
+          colors: ["#001A08", "#FF962D", "#960010", "#966928", "#FFEBBE", "#FFD278"]
+    actions:
+      - action: calendar.get_events
+        target:
+          entity_id: "{{ holiday_calendar }}"
+        data:
+          start_date_time: "{{ today_at().isoformat() }}"
+          duration:
+            days: "{{ (countdown_days | int(36)) + 2 }}"
+        response_variable: cal
+      - variables:
+          holiday: >
+            {%- set n = now() -%}
+            {%- set ev = cal[holiday_calendar].events
+                  if cal is defined and cal is mapping and holiday_calendar in cal else [] -%}
+            {%- set k = namespace(hol=[], ext=[], key='', name='', param=0, next_key='', next_name='', next_date='', days=none) -%}
+            {#- Holidays from the calendar: [date, theme, name] -#}
+            {%- for e in ev -%}
+              {%- set t = holiday_names.get(e.summary) -%}
+              {%- if t and t in themes -%}
+                {%- set k.hol = k.hol + [[(e.start | string)[0:10], t, e.summary]] -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {#- Extra days this year and next: [date, theme, name, from_hour] -#}
+            {%- for y in [n.year, n.year + 1] -%}
+              {#- Easter Sunday (anonymous Gregorian algorithm) -#}
+              {%- set a = y % 19 -%}
+              {%- set b = y // 100 -%}
+              {%- set c = y % 100 -%}
+              {%- set f = (b + 8) // 25 -%}
+              {%- set g = (b - f + 1) // 3 -%}
+              {%- set h = (19 * a + b - b // 4 - g + 15) % 30 -%}
+              {%- set l = (32 + 2 * (b % 4) + 2 * (c // 4) - h - c % 4) % 7 -%}
+              {%- set m = (a + 11 * h + 22 * l) // 451 -%}
+              {%- set easter = '%04d-%02d-%02d' | format(y, (h + l - 7 * m + 114) // 31, (h + l - 7 * m + 114) % 31 + 1) -%}
+              {%- for x in extra_days if x.theme in themes -%}
+                {%- if x.get('date') -%}
+                  {%- set ds = y ~ '-' ~ x.date -%}
+                {%- else -%}
+                  {%- set ds = (strptime(easter, '%Y-%m-%d') + timedelta(days=x.easter_offset | int(0))).strftime('%Y-%m-%d') -%}
+                {%- endif -%}
+                {%- set k.ext = k.ext + [[ds, x.theme, x.name, x.get('from_hour', -1) | int(-1)]] -%}
+              {%- endfor -%}
+            {%- endfor -%}
+            {#- Today -#}
+            {%- set today = n.strftime('%Y-%m-%d') -%}
+            {%- set th = k.hol | selectattr('0', 'eq', today) | list -%}
+            {%- set te = k.ext | selectattr('0', 'eq', today) | list -%}
+            {%- if th and te and te[0][3] >= 0 and n.hour >= te[0][3] -%}
+              {%- set k.key = te[0][1] -%}
+              {%- set k.name = te[0][2] -%}
+            {%- elif th -%}
+              {%- set k.key = th[0][1] -%}
+              {%- set k.name = th[0][2] -%}
+            {%- elif te -%}
+              {%- set k.key = te[0][1] -%}
+              {%- set k.name = te[0][2] -%}
+            {%- endif -%}
+            {#- Next themed day after today -#}
+            {%- for d in range(1, (countdown_days | int(36)) + 1) -%}
+              {%- if k.days is none -%}
+                {%- set ds = (n + timedelta(days=d)).strftime('%Y-%m-%d') -%}
+                {%- set nh = k.hol | selectattr('0', 'eq', ds) | list -%}
+                {%- set ne = k.ext | selectattr('0', 'eq', ds) | list -%}
+                {%- set hit = nh[0] if nh else (ne[0] if ne else none) -%}
+                {%- if hit -%}
+                  {%- set k.days = d -%}
+                  {%- set k.next_key = hit[1] -%}
+                  {%- set k.next_name = hit[2] -%}
+                  {%- set k.next_date = ds -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {#- Preview overrides everything -#}
+            {%- set pv = states(preview_entity) -%}
+            {%- set pick = themes.items() | selectattr('1.name', 'eq', pv) | list -%}
+            {%- if pick -%}
+              {%- set k.key = pick[0][0] -%}
+              {%- set k.name = 'Preview: ' ~ pv -%}
+              {%- set k.param = 1 -%}
+            {%- endif -%}
+            {%- set head = '|' ~ (led_offset | int(0)) ~ '|' ~ (1 if clockwise else 0) ~ '|' -%}
+            {%- if k.key -%}
+              {%- set tm = themes[k.key] -%}
+              {%- set ring = tm.pattern ~ '|' ~ k.param ~ head ~ (tm.colors | map('replace', '#', '') | join(',') | upper) -%}
+            {%- elif normal_day == 'countdown' and k.days is not none -%}
+              {%- set ring = 'countdown|' ~ k.days ~ head ~ (themes[k.next_key].accent | replace('#', '') | upper) -%}
+            {%- elif normal_day == 'glow' -%}
+              {%- set ring = 'glow|0' ~ head ~ (glow_color | replace('#', '') | upper) -%}
+            {%- else -%}
+              {%- set ring = 'off|0' ~ head ~ '000000' -%}
+            {%- endif -%}
+            {{ {'ring': ring, 'theme': k.key or 'none', 'holiday': k.name or 'none',
+                'next_holiday': k.next_name or 'none', 'next_date': k.next_date or 'none',
+                'days_left': k.days} }}
+    sensor:
+      - name: "Holiday Clock Ring"
+        unique_id: holiday_clock_ring
+        icon: mdi:party-popper
+        availability: >
+          {{ holiday is defined and holiday is mapping
+             and cal is defined and cal is mapping and holiday_calendar in cal }}
+        state: >
+          {{ holiday.ring if holiday is defined and holiday is mapping else 'off|0|0|1|000000' }}
+        attributes:
+          theme: "{{ holiday.theme if holiday is defined and holiday is mapping else 'none' }}"
+          holiday: "{{ holiday.holiday if holiday is defined and holiday is mapping else 'none' }}"
+          next_holiday: "{{ holiday.next_holiday if holiday is defined and holiday is mapping else 'none' }}"
+          next_date: "{{ holiday.next_date if holiday is defined and holiday is mapping else 'none' }}"
+          days_left: "{{ holiday.days_left if holiday is defined and holiday is mapping else none }}"

@@ -1,8 +1,9 @@
 """Small stand-in for Home Assistant's template engine.
 
-Implements only what the example packages use: now(), state_attr(),
-states(), is_number(), as_timestamp, int with base, float with default,
-and HA's habit of turning rendered variables into native types.
+Implements only what the example packages use: now(), today_at(),
+state_attr(), states(), is_number(), as_timestamp, strptime, timedelta,
+int with base, float with default, variables steps in actions, and HA's
+habit of turning rendered variables into native types.
 It is a check, not a replacement for Home Assistant itself.
 """
 import ast
@@ -51,11 +52,15 @@ def is_number(value):
         return False
 
 
+def strptime(value, fmt):
+    return dt.datetime.strptime(value, fmt)
+
+
 def make_env():
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     env.filters.update({"int": to_int, "float": to_float, "as_timestamp": as_timestamp})
     env.globals.update({"as_timestamp": as_timestamp, "int": to_int, "float": to_float,
-                        "is_number": is_number})
+                        "is_number": is_number, "strptime": strptime, "timedelta": dt.timedelta})
     return env
 
 
@@ -86,6 +91,7 @@ def render_package(path, now, attributes=None, states=None, response=None, overr
     for block in config["template"]:
         ctx = {
             "now": lambda: now,
+            "today_at": lambda: now.replace(hour=0, minute=0, second=0, microsecond=0),
             "state_attr": lambda e, a: attributes.get(e, {}).get(a),
             "states": lambda e: states.get(e, "unknown"),
         }
@@ -94,8 +100,14 @@ def render_package(path, now, attributes=None, states=None, response=None, overr
         variables = dict(block.get("variables", {}))
         variables.update(overrides or {})
         ctx.update(_render_vars(env, variables, ctx))
+        for step in block.get("actions", []):
+            if "variables" in step:
+                for name, value in step["variables"].items():
+                    ctx[name] = _render_vars(env, value, ctx)
         for sensor in block["sensor"]:
             available = env.from_string(sensor.get("availability", "true")).render(**ctx).strip()
             state = env.from_string(sensor["state"]).render(**ctx).strip()
             results[sensor["name"]] = (available == "True", state)
+            for attr, template in sensor.get("attributes", {}).items():
+                results[sensor["name"] + " " + attr] = (True, env.from_string(template).render(**ctx).strip())
     return results

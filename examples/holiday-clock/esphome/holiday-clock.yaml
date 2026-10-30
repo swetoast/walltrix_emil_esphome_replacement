@@ -1,0 +1,818 @@
+# Holiday Clock: ESPHome firmware for the Walltrix Emil wall clock
+#
+# Draws an animated theme for holidays and special days. The Home Assistant
+# package homeassistant/holiday_clock.yaml decides which theme and colours,
+# in sensor.holiday_clock_ring. The clock draws the animation itself, 25
+# frames a second.
+#
+# Needs secrets.yaml with wifi_ssid, wifi_password, ap_password and api_key
+# (see ../../secrets.example.yaml).
+#
+# Docs: docs/getting-started/03-first-flash.md (flashing)
+#       docs/reference/device-entities.md       (every entity below)
+
+substitutions:
+  name: holiday-clock
+  friendly_name: "Holiday Clock"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - light.turn_on:
+          id: ring
+          brightness: 100%
+          effect: "Holiday Ring"
+
+esp8266:
+  board: esp12e
+
+logger:
+  level: WARN
+  baud_rate: 0
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    encryption:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Holiday Clock Setup"
+    password: !secret ap_password
+
+captive_portal:
+
+debug:
+  update_interval: 60s
+
+globals:
+  - id: ring_hash
+    type: uint32_t
+    initial_value: '0'
+  - id: ring_changed_ms
+    type: uint32_t
+    initial_value: '0'
+  - id: ring_seen
+    type: bool
+    initial_value: 'false'
+
+time:
+  - platform: homeassistant
+    id: ha_time
+    on_time_sync:
+      then:
+        - script.execute: follow_the_sun
+
+text_sensor:
+  - platform: homeassistant
+    id: holiday_ring
+    entity_id: sensor.holiday_clock_ring
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t h = 2166136261u;
+            for (char c : x) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (!id(ring_seen) || h != id(ring_hash)) {
+              id(ring_hash) = h;
+              id(ring_changed_ms) = millis();
+              id(ring_seen) = true;
+            }
+        - component.update: ring_data_age
+  - platform: version
+    name: "ESPHome Version"
+    hide_timestamp: true
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    ssid:
+      name: "Connected SSID"
+    bssid:
+      name: "Connected BSSID"
+    mac_address:
+      name: "MAC Address"
+  - platform: uptime
+    name: "Uptime Readable"
+    entity_category: diagnostic
+  - platform: debug
+    reset_reason:
+      name: "Last Reset Reason"
+
+binary_sensor:
+  - platform: status
+    name: "Status"
+  - platform: template
+    name: "Ring Data Valid"
+    entity_category: diagnostic
+    lambda: |-
+      const std::string &s = id(holiday_ring).state;
+      return std::count(s.begin(), s.end(), '|') == 4;
+
+switch:
+  - platform: template
+    name: "Auto Brightness"
+    id: auto_brightness
+    icon: mdi:brightness-auto
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      - script.execute: follow_the_sun
+
+number:
+  - platform: template
+    name: "Ring Brightness"
+    id: ring_brightness
+    optimistic: true
+    restore_value: true
+    initial_value: 40
+    min_value: 0
+    max_value: 90
+    step: 1
+    mode: slider
+  - platform: template
+    name: "Night Start Hour"
+    id: night_start
+    icon: mdi:weather-night
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_value: 23
+    min_value: 0
+    max_value: 23
+    step: 1
+    mode: box
+    on_value:
+      - script.execute: follow_the_sun
+  - platform: template
+    name: "Night End Hour"
+    id: night_end
+    icon: mdi:weather-sunny
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_value: 6
+    min_value: 0
+    max_value: 23
+    step: 1
+    mode: box
+    on_value:
+      - script.execute: follow_the_sun
+  - platform: template
+    name: "Auto Brightness Min"
+    id: min_brightness
+    icon: mdi:brightness-4
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_value: 10
+    min_value: 0
+    max_value: 90
+    step: 1
+    mode: slider
+    on_value:
+      - script.execute: follow_the_sun
+  - platform: template
+    name: "Auto Brightness Max"
+    id: max_brightness
+    icon: mdi:brightness-7
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_value: 90
+    min_value: 0
+    max_value: 90
+    step: 1
+    mode: slider
+    on_value:
+      - script.execute: follow_the_sun
+
+button:
+  - platform: restart
+    name: "Restart"
+  - platform: safe_mode
+    name: "Restart (Safe Mode)"
+
+light:
+  - platform: neopixelbus
+    id: ring
+    name: "Ring"
+    variant: WS2812
+    type: GRB
+    pin: GPIO12
+    method:
+      type: bit_bang
+    gamma_correct: 1.0
+    num_leds: 36
+    default_transition_length: 300ms
+    restore_mode: ALWAYS_ON
+    effects:
+      - addressable_lambda:
+          name: "Holiday Ring"
+          update_interval: 40ms
+          lambda: |-
+            // sensor.holiday_clock_ring holds "pattern|value|led_offset|clockwise|RRGGBB,RRGGBB,..."
+            // Values marked static are kept from one frame to the next.
+            static const char *const NAMES[] = {"off", "glow", "countdown", "newyear", "epiphany",
+                "semla", "goodfriday", "easter", "valborg", "mayday", "ascension", "national",
+                "midsummer", "halloween", "allsaints", "lucia", "jul"};
+            struct Rocket { float s; int a, b; bool on; };
+            struct Burst { float s, r; int c, k; bool on; };
+            struct Mote { float p, v, s, l; int k; bool on; };
+            static uint32_t seen = 0;
+            static int pat = -1, par = 0, off = 0, npal = 0;
+            static bool cw = true;
+            static uint8_t pal[10][3];
+            static float buf[36][3];
+            static float spark[36];
+            static Rocket rk[6];
+            static Burst bu[14];
+            static Mote mo[24];
+            static float jn[3];
+            static float scare = 0;
+            static uint32_t last_ms = 0, sec_ms = 0;
+            static int last_sec = -1;
+            static const uint8_t WHITE[3] = {255, 255, 255};
+            static const uint8_t HEAD[3] = {255, 220, 160};
+            static const uint8_t TRAIL[3] = {255, 140, 40};
+            static const uint8_t FLASH[3] = {255, 250, 235};
+            static const uint8_t COUNT[3] = {255, 240, 210};
+            static const uint8_t CRACKLE[3] = {255, 255, 230};
+            const float TAU = 6.2831853f, HALF = 3.1415927f;
+
+            // Read the theme again only when the text changes
+            bool reset = initial_run;
+            const std::string &s = id(holiday_ring).state;
+            uint32_t h = 2166136261u;
+            for (char c : s) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (h != seen) {
+              seen = h;
+              std::string f[5];
+              int nf = 0;
+              for (char c : s) {
+                if (c == '|' && nf < 4) {
+                  nf++;
+                  continue;
+                }
+                f[nf] += c;
+              }
+              int np = -1;
+              for (int i = 0; i < 17; i++)
+                if (f[0] == NAMES[i])
+                  np = i;
+              if (nf == 4 && np >= 0 && f[4].size() >= 6) {
+                if (np != pat)
+                  reset = true;
+                pat = np;
+                par = atoi(f[1].c_str());
+                off = atoi(f[2].c_str());
+                cw = f[3] != "0";
+                auto nib = [](char c) -> uint8_t {
+                  if (c >= '0' && c <= '9') return c - '0';
+                  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+                  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+                  return 0;
+                };
+                npal = 0;
+                for (size_t i = 0; i + 6 <= f[4].size() && npal < 10; i += 7) {
+                  for (int q = 0; q < 3; q++)
+                    pal[npal][q] = (nib(f[4][i + 2 * q]) << 4) | nib(f[4][i + 2 * q + 1]);
+                  npal++;
+                }
+              }
+            }
+
+            uint32_t ms = millis();
+            float dt = last_ms ? (ms - last_ms) / 1000.0f : 0.04f;
+            if (dt > 0.1f)
+              dt = 0.1f;
+            last_ms = ms;
+            // Seconds within the hour, so float precision stays fine with a long uptime
+            float t = (ms % 3600000UL) / 1000.0f;
+            if (reset) {
+              for (auto &x : spark) x = -1000;
+              for (auto &r : rk) r.on = false;
+              for (auto &b : bu) b.on = false;
+              for (auto &e : mo) e.on = false;
+              for (auto &j : jn) j = 0.5f;
+              scare = t + 8;
+            }
+
+            auto wrap = [](int p) { return ((p % 36) + 36) % 36; };
+            auto P = [&](int i) -> const uint8_t * { return pal[npal == 0 ? 0 : (i < npal ? i : npal - 1)]; };
+            auto put = [&](int p, const uint8_t *c, float f) {
+              p = wrap(p);
+              for (int q = 0; q < 3; q++) buf[p][q] = c[q] * f;
+            };
+            auto add = [&](int p, const uint8_t *c, float f) {
+              p = wrap(p);
+              for (int q = 0; q < 3; q++) {
+                float v = buf[p][q] + c[q] * f;
+                buf[p][q] = v > 255 ? 255 : v;
+              }
+            };
+            // Add at a fractional place, shared between the two nearest LEDs
+            auto addf = [&](float p, const uint8_t *c, float f) {
+              float fl = floorf(p);
+              float fr = p - fl;
+              add((int) fl, c, (1 - fr) * f);
+              add((int) fl + 1, c, fr * f);
+            };
+            // Colour between a and b (x from 0 to 1), times f
+            auto blend = [&](int p, const uint8_t *a, const uint8_t *b, float x, float f) {
+              p = wrap(p);
+              for (int q = 0; q < 3; q++) buf[p][q] = (a[q] + (b[q] - a[q]) * x) * f;
+            };
+            auto dist = [](int a, int b) {
+              int d = abs(a - b) % 36;
+              return d < 18 ? d : 36 - d;
+            };
+            auto rnd = []() { return random_float(); };
+            auto sq = [](float x) { return x * x; };
+            auto clamp01 = [](float x) { return x < 0 ? 0.0f : (x > 1 ? 1.0f : x); };
+
+            for (auto &p : buf) p[0] = p[1] = p[2] = 0;
+
+            // Places are counted on the face: 0 is 12 o'clock, 9 is 3, 18 is 6, 27 is 9
+            switch (pat) {
+              case 1: {  // glow
+                for (int p = 0; p < 36; p++) put(p, P(0), 1);
+                break;
+              }
+              case 2: {  // countdown: one LED per day left
+                int n = par < 0 ? 0 : (par > 36 ? 36 : par);
+                for (int p = 0; p < n; p++) put(p, P(0), 0.35f);
+                if (n > 0)
+                  put(n - 1, P(0), 0.2f + 0.5f * (0.5f - 0.5f * cosf(t * 2)));
+                break;
+              }
+              case 3: {  // newyear: builds up to midnight
+                float m = 200;  // minutes from midnight, 200 = quiet
+                if (par == 1) {
+                  m = -1.5f + fmodf(t, 180.0f) / 60.0f;  // preview: 23:58:30 to 00:01:30
+                } else {
+                  auto now = id(ha_time).now();
+                  if (now.is_valid()) {
+                    if (now.second != last_sec) {
+                      last_sec = now.second;
+                      sec_ms = ms;
+                    }
+                    float fr = (ms - sec_ms) / 1000.0f;
+                    if (fr > 0.999f)
+                      fr = 0.999f;
+                    float mins = now.hour * 60 + now.minute + (now.second + fr) / 60.0f;
+                    if (now.month == 12 && now.day_of_month == 31)
+                      m = mins - 1440;
+                    else if (now.month == 1 && now.day_of_month == 1)
+                      m = mins;
+                  }
+                }
+                if (m >= -1 && m < 0) {  // the last minute: the ring fills, the last 10 seconds pulse
+                  float sc = (m + 1) * 60;
+                  int lit = (int) (sc / 60 * 36);
+                  if (lit > 36)
+                    lit = 36;
+                  float f = sc >= 50 ? 0.35f + 0.65f * (1 - fmodf(sc, 1)) : 1;
+                  for (int p = 0; p < lit; p++) put(p, sc >= 50 ? COUNT : P(0), 0.7f * f);
+                  if (lit < 36) {
+                    float step = 60.0f / 36;
+                    add(lit, WHITE, 0.9f * fmodf(sc, step) / step);
+                  }
+                  break;
+                }
+                float I = m < -360 ? 0.04f
+                        : m < -60  ? 0.04f + 0.3f * sq((m + 360) / 300)
+                        : m < -1   ? 0.34f + 0.5f * sq((m + 60) / 59)
+                        : m < 15   ? 1.6f
+                        : m < 120  ? 1 - 0.85f * (m - 15) / 105
+                                   : 0.12f;
+                int nk = npal > 0 ? npal : 1;
+                if (rnd() < I * 6 * dt) {
+                  int tg = wrap(18 + (rnd() < 0.5f ? -1 : 1) * (9 + (int) (rnd() * 9)));
+                  if (rnd() < (m < 0 ? 0.6f : 0.3f)) {
+                    for (auto &r : rk)
+                      if (!r.on) {
+                        r = {t, 18, tg, true};
+                        break;
+                      }
+                  } else {
+                    for (auto &b : bu)
+                      if (!b.on) {
+                        b = {t, 4 + rnd() * 4, tg, (int) (rnd() * nk) % nk, true};
+                        break;
+                      }
+                  }
+                }
+                for (auto &r : rk) {
+                  if (!r.on)
+                    continue;
+                  float a = (t - r.s) / 0.7f;
+                  if (a < 0) {
+                    r.on = false;
+                    continue;
+                  }
+                  if (a >= 1) {
+                    r.on = false;
+                    for (auto &b : bu)
+                      if (!b.on) {
+                        b = {t, 4 + rnd() * 4, r.b, (int) (rnd() * nk) % nk, true};
+                        break;
+                      }
+                    continue;
+                  }
+                  int d = ((r.b - r.a + 54) % 36) - 18;
+                  float p = r.a + d * a;
+                  addf(p, HEAD, 0.9f);
+                  addf(p - (d > 0 ? 1 : -1), TRAIL, 0.35f);
+                }
+                for (auto &b : bu) {
+                  if (!b.on)
+                    continue;
+                  float a = t - b.s;
+                  if (a < 0 || a > 1.8f) {
+                    b.on = false;
+                    continue;
+                  }
+                  float rad = (a < 0.45f ? a / 0.45f : 1) * b.r;
+                  float fade = powf(1 - a / 1.8f, 1.5f);
+                  for (int d = -8; d <= 8; d++) {
+                    float f = 1 - fabsf(fabsf((float) d) - rad);
+                    if (f > 0)
+                      add(b.c + d, P(b.k), f * fade);
+                  }
+                  if (a > 0.5f && rnd() < 0.5f)
+                    add(b.c + (int) roundf((rnd() * 2 - 1) * b.r), CRACKLE, fade * 0.9f);
+                }
+                if (m >= 0 && m < 2.0f / 60) {  // midnight flash
+                  float f = 1 - m * 30;
+                  for (auto &p : buf)
+                    for (int q = 0; q < 3; q++) p[q] += (FLASH[q] - p[q]) * f;
+                }
+                if (m >= 120 && rnd() < 3 * dt)
+                  add((int) (rnd() * 36), P(0), 0.25f);
+                break;
+              }
+              case 4: {  // epiphany: three lights walk up to the star
+                for (int p = 0; p < 36; p++) put(p, P(0), 1);
+                float ph = fmodf(t, 30);
+                float lead = 18 + fminf(15.5f, ph * 0.7f);
+                float arrive = ph > 22.5f ? fminf(1, (ph - 22.5f) / 1.5f) : 0;
+                float out = ph > 27.5f ? fmaxf(0, 1 - (ph - 27.5f) / 2.5f) : 1;
+                float sf = 0.75f + 0.15f * sinf(t * 3.1f) * sinf(t * 1.7f) + arrive * out * 0.25f;
+                add(0, P(1), sf);
+                add(35, P(1), 0.22f * sf + 0.05f * sinf(t * 5));
+                add(1, P(1), 0.22f * sf + 0.05f * sinf(t * 4.3f));
+                if (arrive * out > 0) {
+                  add(34, P(1), 0.15f * arrive * out);
+                  add(2, P(1), 0.15f * arrive * out);
+                }
+                for (int k = 0; k < 3; k++) {
+                  float pos = lead - k * 2.3f;
+                  float f = (0.55f + 0.2f * arrive) * out * fminf(1, ph / 1.5f);
+                  addf(pos, P(2 + k), f);
+                  addf(pos - 1, P(2 + k), f * 0.15f);
+                }
+                break;
+              }
+              case 5: {  // semla: bun below, cream above, sugar dusting
+                for (int p = 0; p < 36; p++) {
+                  float y = cosf(p / 36.0f * TAU);
+                  if (y > 0.1f)
+                    put(p, P(0), 0.72f);
+                  else if (y < -0.1f)
+                    blend(p, P(1), P(2), (y + 1) / 0.9f, 0.8f);
+                  else
+                    put(p, P(3), 0.75f);
+                }
+                if (rnd() < 2.5f * dt)
+                  spark[(27 + (int) (rnd() * 19)) % 36] = t;
+                for (int p = 0; p < 36; p++) {
+                  float a = t - spark[p];
+                  if (a >= 0 && a < 1.6f)
+                    add(p, P(4), 0.35f * sinf(a / 1.6f * HALF));
+                }
+                break;
+              }
+              case 6: {  // goodfriday: five red roses at 6
+                for (int k = 0; k < 5; k++)
+                  put(16 + k, P(0), 0.32f + 0.22f * (0.5f - 0.5f * cosf(t * TAU / 9 + k * 0.8f)));
+                break;
+              }
+              case 7: {  // easter: colours turning round the ring
+                int n = npal > 0 ? npal : 1;
+                for (int p = 0; p < 36; p++) {
+                  float x = fmodf((p + t * 3) / 9, (float) n);
+                  int k = (int) x;
+                  blend(p, P(k % n), P((k + 1) % n), x - k, 1);
+                }
+                break;
+              }
+              case 8: {  // valborg: bonfire at 6, embers, spring evening sky
+                for (int p = 0; p < 36; p++) {
+                  int d = dist(p, 18);
+                  if (d <= 5) {
+                    float nn = clamp01(0.55f + 0.45f * sinf(t * 9 + p * 2.7f) * sinf(t * 5.3f + p * 1.9f) + (rnd() - 0.5f) * 0.25f);
+                    float hh = (1 - d / 6.0f) * (0.55f + 0.45f * nn);
+                    float sc = 0.45f + 0.55f * hh;
+                    if (hh < 0.5f)
+                      blend(p, P(0), P(1), hh * 2, sc);
+                    else
+                      blend(p, P(1), P(2), (hh - 0.5f) * 2, sc);
+                  } else {
+                    blend(p, P(3), P(4), (cosf(p / 36.0f * TAU) + 1) / 2, 0.16f);
+                  }
+                }
+                if (rnd() < 7 * dt)
+                  for (auto &e : mo)
+                    if (!e.on) {
+                      e = {18 + (rnd() * 2 - 1) * 2.5f, (rnd() < 0.5f ? -1 : 1) * (1.8f + rnd() * 2.2f), t, 0.9f + rnd() * 1.6f, 5, true};
+                      break;
+                    }
+                for (auto &e : mo) {
+                  if (!e.on)
+                    continue;
+                  float a = t - e.s;
+                  if (a < 0 || a > e.l) {
+                    e.on = false;
+                    continue;
+                  }
+                  addf(e.p + e.v * a + sinf(t * 7 + e.s) * 0.3f, P(5), (1 - a / e.l) * (0.6f + 0.4f * rnd()));
+                }
+                break;
+              }
+              case 9: {  // mayday: red banners marching in step
+                float b = t / 0.6f;
+                float st = floorf(b);
+                int step = (int) st;
+                float bo = 1 - 0.3f * (b - st);
+                for (int p = 0; p < 36; p++) {
+                  int k = wrap(p - step) % 6;
+                  if (k < 4)
+                    put(p, k == 0 ? P(1) : P(0), (0.7f + 0.3f * sinf(t * 4.5f + p * 1.4f)) * bo);
+                  else
+                    put(p, P(2), 0.55f * bo);
+                }
+                break;
+              }
+              case 10: {  // ascension: light rising from 6 to 12 on both sides
+                float y = fmodf(t * 0.35f, 1.3f);
+                for (int p = 0; p < 36; p++) {
+                  float a = (p < 18 ? p : 36 - p) / 18.0f;
+                  float d = y - (1 - a);
+                  if (d > 0)
+                    blend(p, P(1), P(0), fminf(1, d * 3), fmaxf(0.2f, 1 - d * 1.2f));
+                  else
+                    put(p, P(0), 0.08f);
+                }
+                break;
+              }
+              case 11: {  // national: two halves turning, with a shimmer
+                for (int p = 0; p < 36; p++) {
+                  float a = fmodf(p + t * 1.5f, 36) / 36;
+                  int k = a < 0.5f ? 0 : 1;
+                  float e = fminf(fabsf(a - 0.5f), fminf(a, 1 - a));
+                  if (e < 0.03f)
+                    blend(p, P(k), WHITE, 0.4f, 1);
+                  else
+                    put(p, P(k), 0.85f + 0.15f * sinf(t * 5 + p));
+                }
+                break;
+              }
+              case 12: {  // midsummer: birch leaves, seven flowers, ring dance
+                static const int FLW[7] = {2, 7, 12, 17, 22, 27, 32};
+                for (int p = 0; p < 36; p++)
+                  blend(p, P(0), P(1), 0.5f + 0.5f * sinf(t * 0.9f + p * 0.8f) * sinf(t * 0.55f + p * 2.3f), 0.55f);
+                for (int k = 0; k < 7; k++)
+                  put(FLW[k], P(3 + k), 0.75f + 0.25f * sinf(t * 0.7f + k * 1.1f));
+                float dp = fmodf(t * 1.4f, 36);
+                for (int d = -3; d <= 3; d++)
+                  addf(dp + d, P(2), 0.22f * (1 - abs(d) / 4.0f));
+                break;
+              }
+              case 13: {  // halloween: lanterns, wisps, heartbeat, something passing
+                static const int JK[3] = {6, 18, 30};
+                if (scare - t > 60)
+                  scare = t + 8;
+                if (t >= scare && t < scare + 1)
+                  break;  // everything goes black
+                if (t >= scare + 1 && t < scare + 1.6f) {
+                  float hd = (t - scare - 1) / 0.6f * 36;
+                  for (int d = 0; d < 8; d++) addf(hd - d, P(4), 1 - d / 8.0f);
+                  break;
+                }
+                if (t >= scare + 1.6f)
+                  scare = t + 14 + rnd() * 12;
+                for (int p = 0; p < 36; p++) put(p, P(0), 1);
+                for (int k = 0; k < 3; k++) {
+                  jn[k] = jn[k] * 0.82f + rnd() * 0.18f;
+                  float f = 0.18f + 0.65f * jn[k];
+                  add(JK[k], P(1), f);
+                  add(JK[k] - 1, P(1), f * 0.12f);
+                  add(JK[k] + 1, P(1), f * 0.12f);
+                }
+                for (int w = 0; w < 2; w++) {
+                  Mote &e = mo[w];
+                  float a = t - e.s;
+                  if (!e.on || a < 0 || a > e.l) {
+                    e = {rnd() * 36, 0, t, 4 + rnd() * 4, rnd() < 0.5f ? 2 : 3, true};
+                    a = 0;
+                  }
+                  e.v += (rnd() - 0.5f) * dt * 6;
+                  e.v = e.v > 2 ? 2 : (e.v < -2 ? -2 : e.v);
+                  e.p = fmodf(e.p + e.v * dt + 36, 36);
+                  float sn = sinf(a / e.l * HALF);
+                  addf(e.p, P(e.k), 0.55f * sn * sn * (0.7f + 0.3f * rnd()));
+                }
+                float ph = fmodf(t, 5.5f);
+                float beat = expf(-sq(ph / 0.09f)) + 0.7f * expf(-sq((ph - 0.32f) / 0.09f));
+                for (int p = 0; p < 36; p++) add(p, P(4), beat * 0.25f);
+                break;
+              }
+              case 14: {  // allsaints: grave candles at every hour mark
+                for (int p = 0; p < 36; p++)
+                  put(p, P(0), p % 3 == 0 ? 0.7f + 0.3f * sinf(t * 9 + p * 5) * sinf(t * 4.1f + p) : 0.04f);
+                break;
+              }
+              case 15: {  // lucia: crown of seven candles on the top half
+                static const int LC[7] = {27, 30, 33, 0, 3, 6, 9};
+                for (int p = 0; p < 36; p++) put(p, P(1), 0.04f);
+                for (int q = 0; q < 7; q++) {
+                  float n = 0.75f + 0.25f * sinf(t * 8 + q * 3) * sinf(t * 3 + q);
+                  put(LC[q], P(0), n);
+                  add(LC[q] + 1, P(1), 0.15f * n);
+                  add(LC[q] - 1, P(1), 0.15f * n);
+                }
+                break;
+              }
+              case 16: {  // jul: candles, apples, straw and the advent star
+                for (int p = 0; p < 36; p++) {
+                  if (p % 4 == 2)
+                    put(p, P(1), 0.65f + 0.35f * sinf(t * 8.5f + p * 3.3f) * sinf(t * 3.7f + p * 1.1f));
+                  else if (p % 8 == 4)
+                    put(p, P(2), 1);
+                  else if (p % 8 == 0 && p)
+                    put(p, P(3), 1);
+                  else
+                    put(p, P(0), 1);
+                }
+                put(0, P(4), 0.75f + 0.15f * sinf(t * 1.1f));
+                if (rnd() < 3 * dt)
+                  spark[1 + 2 * (int) (rnd() * 18)] = t;
+                for (int p = 0; p < 36; p++) {
+                  float a = t - spark[p];
+                  if (a >= 0 && a < 0.9f)
+                    add(p, P(5), 0.55f * sinf(a / 0.9f * HALF));
+                }
+                break;
+              }
+              default:  // off, or no theme received yet
+                break;
+            }
+
+            float scale = id(ring_brightness).state / 255.0f;
+            for (int p = 0; p < 36; p++) {
+              int led = cw ? wrap(p + off) : wrap(off - p);
+              uint8_t c[3];
+              for (int q = 0; q < 3; q++) {
+                float v = buf[p][q] * scale;
+                c[q] = v <= 0 ? 0 : (v >= 255 ? 255 : (uint8_t) v);
+              }
+              it[led] = Color(c[0], c[1], c[2]);
+            }
+      - addressable_rainbow:
+          name: "Rainbow Test"
+      - addressable_lambda:
+          name: "LED Index Test"
+          update_interval: 1s
+          lambda: |-
+            it.all() = Color::BLACK;
+            it[0] = Color(60, 60, 60);
+            it[1] = Color(60, 0, 0);
+            it[2] = Color(0, 60, 0);
+
+sensor:
+  - platform: homeassistant
+    id: sun_elevation
+    entity_id: sun.sun
+    attribute: elevation
+    internal: true
+    on_value:
+      then:
+        - script.execute: follow_the_sun
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    id: wifi_signal_db
+    update_interval: 60s
+  - platform: copy
+    source_id: wifi_signal_db
+    name: "WiFi Signal Percent"
+    unit_of_measurement: "%"
+    entity_category: diagnostic
+    device_class: ""
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+  - platform: uptime
+    name: "Uptime"
+  - platform: debug
+    free:
+      name: "Free Heap"
+    block:
+      name: "Largest Free Block"
+    fragmentation:
+      name: "Heap Fragmentation"
+    loop_time:
+      name: "Loop Time"
+  - platform: template
+    name: "Ring Data Age"
+    id: ring_data_age
+    icon: mdi:timer-sand
+    unit_of_measurement: "min"
+    accuracy_decimals: 0
+    state_class: measurement
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      if (!id(ring_seen))
+        return {};
+      return (millis() - id(ring_changed_ms)) / 60000.0f;
+  - platform: template
+    name: "Ring Power Estimate"
+    icon: mdi:flash
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      auto *out = static_cast<light::AddressableLight *>(id(ring).get_output());
+      uint32_t sum = 0;
+      float bright = 0.0f;
+      if (id(ring).current_values.is_on()) {
+        bright = id(ring).current_values.get_brightness();
+        for (int i = 0; i < out->size(); i++) {
+          Color c = (*out)[i].get();
+          sum += c.r + c.g + c.b;
+        }
+      }
+      // WS2812: about 1 mA idle per LED, about 20 mA per channel at full, 5 V supply
+      float ma = out->size() * 1.0f + (sum / 255.0f) * 20.0f * bright;
+      return ma * 5.0f / 1000.0f;
+
+script:
+  - id: follow_the_sun
+    mode: single
+    then:
+      - lambda: |-
+          if (!id(auto_brightness).state)
+            return;
+          auto now = id(ha_time).now();
+          float elevation = id(sun_elevation).state;
+          if (!now.is_valid() || std::isnan(elevation))
+            return;
+          int start = (int) id(night_start).state;
+          int end = (int) id(night_end).state;
+          bool night;
+          if (start == end)
+            night = false;
+          else if (start > end)
+            night = now.hour >= start || now.hour < end;
+          else
+            night = now.hour >= start && now.hour < end;
+          float lo = id(min_brightness).state;
+          float hi = id(max_brightness).state;
+          if (lo > hi)
+            std::swap(lo, hi);
+          float level;
+          if (night) {
+            level = 0;
+          } else {
+            float f = (elevation - (-6)) / 36;
+            f = f < 0 ? 0 : (f > 1 ? 1 : f);
+            level = lo + (hi - lo) * f;
+          }
+          level = roundf(level);
+          if (level > 90)
+            level = 90;
+          if (id(ring_brightness).state != level) {
+            auto call = id(ring_brightness).make_call();
+            call.set_value(level);
+            call.perform();
+          }
+
+interval:
+  - interval: 60s
+    then:
+      - script.execute: follow_the_sun

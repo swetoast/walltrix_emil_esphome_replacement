@@ -1,6 +1,6 @@
 # Device entities
 
-Every entity the firmware creates. Entity IDs are prefixed with the device's friendly name: `price_clock_`, `weather_clock_`, `sky_clock_` or `adguard_clock_`. The tables use `<clock>` for that prefix.
+Every entity the firmware creates. Entity IDs are prefixed with the device's friendly name: `price_clock_`, `weather_clock_`, `sky_clock_`, `adguard_clock_` or `holiday_clock_`. The tables use `<clock>` for that prefix.
 
 ## Controls
 
@@ -28,14 +28,15 @@ Saved values survive a restart. They survive a power cut only with `restore_from
 | Weather Ring | Weather Clock | Colours from the sensor chosen by Ring Mode |
 | Sky Ring | Sky Clock | Colours from the sensor chosen by Ring Mode |
 | AdGuard Ring | AdGuard Clock | Colours from `sensor.adguard_clock_ring_colors` |
-| Rainbow Test | Both | Moving rainbow on all LEDs, for checking the hardware |
-| LED Index Test | Both | LED 0 white, LED 1 red, LED 2 green, rest off. For finding `led_offset` and `clockwise` |
+| Holiday Ring | Holiday Clock | The theme named by `sensor.holiday_clock_ring`, animated at 25 frames a second |
+| Rainbow Test | All | Moving rainbow on all LEDs, for checking the hardware |
+| LED Index Test | All | LED 0 white, LED 1 red, LED 2 green, rest off. For finding `led_offset` and `clockwise` |
 
 ## Ring data
 
 | Entity | Unit | Description |
 |---|---|---|
-| `binary_sensor.<clock>_ring_data_valid` | on/off | On when the active colour sensor holds a full 216 character string |
+| `binary_sensor.<clock>_ring_data_valid` | on/off | On when the active colour sensor holds a full 216 character string. Holiday Clock: on when the theme line has all five fields |
 | `sensor.<clock>_ring_data_age` | min | Minutes since the active colour sensor last actually changed. A reconnect that resends the same colours does not reset it. Unknown until the first data arrives. |
 | `sensor.<clock>_ring_power_estimate` | W | Estimated LED power from the colours being shown, assuming about 1 mA idle per LED, 20 mA per colour channel at full and a 5 V supply. Use it for trends, not as a measurement. |
 

@@ -98,6 +98,23 @@ Outputs:
 
 Output: `sensor.adguard_clock_ring_colors`
 
+## Holiday Clock
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `holiday_calendar` | entity ID | `calendar.sweden` | Calendar from the Holiday integration |
+| `preview_entity` | entity ID | `input_select.holiday_clock_preview` | Preview selector added by the package. Auto follows the calendar |
+| `led_offset` | 0 to 35 | `0` | The LED under 12 o'clock |
+| `clockwise` | `true` or `false` | `true` | LED numbers go up clockwise |
+| `normal_day` | `countdown`, `glow` or `off` | `countdown` | What the ring shows on days without a theme |
+| `countdown_days` | 1 to 36 | `36` | How far ahead the countdown looks |
+| `glow_color` | colour | `"#201810"` | Every LED when `normal_day` is `glow` |
+| `holiday_names` | map | 32 English and Swedish event names | Calendar event name to theme |
+| `extra_days` | list | Walpurgis Night, Halloween, Lucia, Shrove Tuesday | Days the calendar does not have. Each has `name`, `theme`, and `date: "MM-DD"` or `easter_offset`. `from_hour` lets it take over from a calendar holiday on the same date from that hour |
+| `themes` | map | 14 themes | Each theme has `name`, `pattern`, `accent` (countdown colour) and `colors`. The colour order per pattern is in the [Holiday Clock README](../../examples/holiday-clock/README.md#change-colours) |
+
+Output: `sensor.holiday_clock_ring`, with attributes `theme`, `holiday`, `next_holiday`, `next_date` and `days_left`.
+
 ## Value types
 
 | Type | Written as | Example |
