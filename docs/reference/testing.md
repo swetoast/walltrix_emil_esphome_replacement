@@ -29,7 +29,9 @@ In a terminal with colour support, each ring is drawn as a row of 36 coloured bl
 | Sky Clock Sun ring, every allowed `layout` and `interval_minutes` | Each interval's LEDs are one colour |
 | Sky Clock Sun ring at 07:23 | The 7 is morning and bright, the 8 and the 4 are day, the 5 is evening, the 6 is night |
 | Sky Clock, all 8 moon phases | 0, 9, 18, 27 or 36 LEDs lit, from the right place on the face |
-| Sky Clock without `sensor.moon_phase` | Moon ring unavailable |
+| Sky Clock without `sensor.moon_phase` | Moon Phase ring unavailable |
+| Sky Clock moon rings at 10:59 (moonset 13:38, moonrise 18:24) | Moon Up: 10 to 13 up, 14 to 18 down, 19 to 21 up. Sun and Moon: 10:00 both, 14:00 sun, 17:00 neither, 19:00 moon. Moon Light: 77.62 percent = 28 LEDs. Moon Position: 299.48 degrees at the 10. Full Moon: 26 LEDs |
+| Sky Clock without the moon details sensor | The five moon detail rings unavailable |
 | AdGuard Clock at 0, 7.89, 25, 50 and 100 percent | 0, 3, 9, 18 and 36 blocked LEDs, the rest allowed |
 | AdGuard Clock without AdGuard Home | Sensor unavailable |
 

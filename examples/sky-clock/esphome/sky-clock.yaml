@@ -1,9 +1,14 @@
 # Sky Clock: ESPHome firmware for the Walltrix Emil wall clock
 #
-# Draws one of two rings made by the Home Assistant package
+# Draws one of seven rings made by the Home Assistant package
 # homeassistant/sky_clock.yaml. The Ring Mode select picks which:
-#   Sun   sensor.sky_clock_sun_ring_colors
-#   Moon  sensor.sky_clock_moon_ring_colors
+#   Sun           sensor.sky_clock_sun_ring_colors
+#   Moon Phase    sensor.sky_clock_moon_ring_colors
+#   Moon Up       sensor.sky_clock_moon_up_ring_colors
+#   Sun and Moon  sensor.sky_clock_sun_and_moon_ring_colors
+#   Moon Light    sensor.sky_clock_moon_light_ring_colors
+#   Moon Position sensor.sky_clock_moon_position_ring_colors
+#   Full Moon     sensor.sky_clock_full_moon_ring_colors
 #
 # Needs secrets.yaml with wifi_ssid, wifi_password, ap_password and api_key
 # (see ../../secrets.example.yaml).
@@ -55,14 +60,14 @@ debug:
 
 globals:
   - id: src_hash
-    type: uint32_t[2]
-    initial_value: '{0, 0}'
+    type: uint32_t[7]
+    initial_value: '{0, 0, 0, 0, 0, 0, 0}'
   - id: src_changed_ms
-    type: uint32_t[2]
-    initial_value: '{0, 0}'
+    type: uint32_t[7]
+    initial_value: '{0, 0, 0, 0, 0, 0, 0}'
   - id: src_seen
-    type: bool[2]
-    initial_value: '{false, false}'
+    type: bool[7]
+    initial_value: '{false, false, false, false, false, false, false}'
 
 time:
   - platform: homeassistant
@@ -106,6 +111,91 @@ text_sensor:
               id(src_seen)[1] = true;
             }
         - component.update: ring_data_age
+  - platform: homeassistant
+    id: moon_up_colors
+    entity_id: sensor.sky_clock_moon_up_ring_colors
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t h = 2166136261u;
+            for (char c : x) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (!id(src_seen)[2] || h != id(src_hash)[2]) {
+              id(src_hash)[2] = h;
+              id(src_changed_ms)[2] = millis();
+              id(src_seen)[2] = true;
+            }
+        - component.update: ring_data_age
+  - platform: homeassistant
+    id: sun_moon_colors
+    entity_id: sensor.sky_clock_sun_and_moon_ring_colors
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t h = 2166136261u;
+            for (char c : x) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (!id(src_seen)[3] || h != id(src_hash)[3]) {
+              id(src_hash)[3] = h;
+              id(src_changed_ms)[3] = millis();
+              id(src_seen)[3] = true;
+            }
+        - component.update: ring_data_age
+  - platform: homeassistant
+    id: moon_light_colors
+    entity_id: sensor.sky_clock_moon_light_ring_colors
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t h = 2166136261u;
+            for (char c : x) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (!id(src_seen)[4] || h != id(src_hash)[4]) {
+              id(src_hash)[4] = h;
+              id(src_changed_ms)[4] = millis();
+              id(src_seen)[4] = true;
+            }
+        - component.update: ring_data_age
+  - platform: homeassistant
+    id: moon_position_colors
+    entity_id: sensor.sky_clock_moon_position_ring_colors
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t h = 2166136261u;
+            for (char c : x) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (!id(src_seen)[5] || h != id(src_hash)[5]) {
+              id(src_hash)[5] = h;
+              id(src_changed_ms)[5] = millis();
+              id(src_seen)[5] = true;
+            }
+        - component.update: ring_data_age
+  - platform: homeassistant
+    id: full_moon_colors
+    entity_id: sensor.sky_clock_full_moon_ring_colors
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t h = 2166136261u;
+            for (char c : x) {
+              h ^= (uint8_t) c;
+              h *= 16777619u;
+            }
+            if (!id(src_seen)[6] || h != id(src_hash)[6]) {
+              id(src_hash)[6] = h;
+              id(src_changed_ms)[6] = millis();
+              id(src_seen)[6] = true;
+            }
+        - component.update: ring_data_age
   - platform: version
     name: "ESPHome Version"
     hide_timestamp: true
@@ -133,7 +223,8 @@ binary_sensor:
     entity_category: diagnostic
     lambda: |-
       size_t m = id(ring_mode).active_index().value_or(0);
-      const std::string &s = m == 1 ? id(moon_colors).state : id(sun_colors).state;
+      text_sensor::TextSensor *src[] = {id(sun_colors), id(moon_colors), id(moon_up_colors), id(sun_moon_colors), id(moon_light_colors), id(moon_position_colors), id(full_moon_colors)};
+      const std::string &s = src[m < 7 ? m : 0]->state;
       return s.length() >= 216;
 
 select:
@@ -143,7 +234,12 @@ select:
     icon: mdi:circle-slice-8
     options:
       - "Sun"
-      - "Moon"
+      - "Moon Phase"
+      - "Moon Up"
+      - "Sun and Moon"
+      - "Moon Light"
+      - "Moon Position"
+      - "Full Moon"
     initial_option: "Sun"
     optimistic: true
     restore_value: true
@@ -254,7 +350,8 @@ light:
           update_interval: 1s
           lambda: |-
             size_t m = id(ring_mode).active_index().value_or(0);
-            const std::string &s = m == 1 ? id(moon_colors).state : id(sun_colors).state;
+            text_sensor::TextSensor *src[] = {id(sun_colors), id(moon_colors), id(moon_up_colors), id(sun_moon_colors), id(moon_light_colors), id(moon_position_colors), id(full_moon_colors)};
+            const std::string &s = src[m < 7 ? m : 0]->state;
             if (s.length() < 216)
               return;
             auto nib = [](char c) -> uint8_t {
@@ -326,7 +423,7 @@ sensor:
     update_interval: 60s
     lambda: |-
       size_t m = id(ring_mode).active_index().value_or(0);
-      if (m > 1 || !id(src_seen)[m])
+      if (m > 6 || !id(src_seen)[m])
         return {};
       return (millis() - id(src_changed_ms)[m]) / 60000.0f;
   - platform: template

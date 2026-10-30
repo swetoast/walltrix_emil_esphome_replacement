@@ -14,7 +14,7 @@ Every entity the firmware creates. Entity IDs are prefixed with the device's fri
 | `number.<clock>_auto_brightness_min` | Number | 0 to 90 | 10 | yes | Ring Brightness in the dark |
 | `number.<clock>_auto_brightness_max` | Number | 0 to 90 | 90 | yes | Ring Brightness in full daylight |
 | `select.weather_clock_ring_mode` | Select | Condition, Temperature, Rain | Condition | yes | Weather Clock only. Which ring to show. |
-| `select.sky_clock_ring_mode` | Select | Sun, Moon | Sun | yes | Sky Clock only. Which ring to show. |
+| `select.sky_clock_ring_mode` | Select | Sun, Moon Phase, Moon Up, Sun and Moon, Moon Light, Moon Position, Full Moon | Sun | yes | Sky Clock only. Which ring to show. |
 | `button.<clock>_restart` | Button | | | | Restarts the clock |
 | `button.<clock>_restart_safe_mode` | Button | | | | Restarts into safe mode, which only waits for an OTA update. Use it if a bad update keeps crashing the clock. |
 

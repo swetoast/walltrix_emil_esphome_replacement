@@ -192,6 +192,40 @@ for phase, first, count in [("new_moon", None, 0), ("waxing_crescent", 0, 9), ("
 expect(not render_package(SKY, NOW, attributes=sun)["Sky Clock Moon Ring Colors"][0],
        "sky: moon ring unavailable without sensor.moon_phase")
 
+# Sky Clock moon rings, with a moon sensor like sensor.moon_details at 10:59:
+# moonset 13:38, moonrise 18:24, azimuth 299.5, altitude 14.3, 77.6 percent lit,
+# next full moon 24 November 15:53
+AT = dt.datetime(2026, 10, 30, 10, 59, tzinfo=TZ)
+MOON = {"moonrise": "2026-10-30T18:24:31+01:00", "moonset": "2026-10-30T13:38:09+01:00",
+        "moon_azimuth_deg": 299.48, "moon_altitude_deg": 14.28, "illumination_fraction": 77.62,
+        "next_full_moon": "2026-11-24T14:53:29+00:00"}
+SUN_AT = {"next_rising": "2026-10-31T06:15:58+00:00", "next_setting": "2026-10-30T15:29:15+00:00",
+          "next_dawn": "2026-10-31T05:33:21+00:00", "next_dusk": "2026-10-30T16:11:36+00:00"}
+sky = render_package(SKY, AT, attributes={"sun.sun": SUN_AT, "sensor.moon_details": MOON},
+                     states={"sensor.moon_phase": "waning_gibbous"})
+for name, (available, state) in sky.items():
+    expect(available and bool(HEX216.match(state)), f"sky {name}: should be available with 216 hex characters")
+hours = groups(sky["Sky Clock Moon Up Ring Colors"][1], 3)
+up, down = "505466", "000619"
+expect(hours[10] == ["C8D2FF"] * 3, "moon up: 10:00 is now, moon up, bright")
+expect([hours[h][0] for h in (11, 0, 1)] == [up] * 3, "moon up: 11, 12 and 13 o'clock up before the 13:38 moonset")
+expect([hours[h][0] for h in (2, 3, 4, 5, 6)] == [down] * 5, "moon up: 14 to 18 o'clock down")
+expect([hours[h][0] for h in (7, 8, 9)] == [up] * 3, "moon up: 19 to 21 o'clock up after the 18:24 moonrise")
+hours = groups(sky["Sky Clock Sun and Moon Ring Colors"][1], 3)
+expect(hours[10] == ["FFFFFF"] * 3, "sun and moon: 10:00 both up, bright")
+expect(hours[2][0] == "664800" and hours[5][0] == "000000" and hours[7][0] == up,
+       "sun and moon: 14:00 sun only, 17:00 neither, 19:00 moon only")
+light = sky["Sky Clock Moon Light Ring Colors"][1]
+expect(light == "C8D2FF" * 28 + "000000" * 8, "moon light: 77.62 percent lights 28 LEDs")
+position = sky["Sky Clock Moon Position Ring Colors"][1]
+expect([i for i in range(36) if position[i * 6:i * 6 + 6] != "000000"] == [30], "moon position: 299.5 degrees is at the 10")
+full = sky["Sky Clock Full Moon Ring Colors"][1]
+expect(full == "C8D2FF" * 26 + "000000" * 10, "full moon: 25 days and 5 hours left lights 26 LEDs")
+for name, (available, _state) in render_package(SKY, AT, attributes={"sun.sun": SUN_AT},
+                                                 states={"sensor.moon_phase": "full_moon"}).items():
+    if name not in ("Sky Clock Sun Ring Colors", "Sky Clock Moon Ring Colors"):
+        expect(not available, f"sky {name}: unavailable without the moon details sensor")
+
 # AdGuard Clock: blocked share of 36 LEDs, rounded, clockwise from 12 o'clock
 for ratio, blocked in [("0", 0), ("7.89", 3), ("25", 9), ("50", 18), ("100", 36)]:
     net = render_package(ADGUARD, NOW, states={"sensor.adguard_home_dns_queries_blocked_ratio": ratio})

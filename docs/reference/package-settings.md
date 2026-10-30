@@ -50,14 +50,20 @@ Outputs:
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `moon_entity` | entity ID | `sensor.moon_phase` | Moon phase sensor from the Moon integration |
-| `layout` | `minutes` or `hours` | `hours` | Sun ring: the full ring is 60 minutes or 12 hours |
-| `interval_minutes` | `minutes`: 15 or 30. `hours`: 60, 120, 180 or 360 | `60` | Sun ring: length of one interval |
+| `moon_details_entity` | entity ID | `sensor.moon_details` | Moon sensor with `moonrise`, `moonset`, `moon_azimuth_deg`, `moon_altitude_deg`, `illumination_fraction` and `next_full_moon` attributes. Set it to your own sensor |
+| `layout` | `minutes` or `hours` | `hours` | Sun, Moon Up and Sun and Moon rings: the full ring is 60 minutes or 12 hours |
+| `interval_minutes` | `minutes`: 15 or 30. `hours`: 60, 120, 180 or 360 | `60` | Sun, Moon Up and Sun and Moon rings: length of one interval |
 | `led_offset` | 0 to 35 | `0` | The LED under 12 o'clock |
 | `clockwise` | `true` or `false` | `true` | LED numbers go up clockwise |
-| `dim_others` | 0.0 to 1.0 | `0.4` | Sun ring: brightness factor outside the current interval |
+| `dim_others` | 0.0 to 1.0 | `0.4` | Sun, Moon Up and Sun and Moon rings: brightness factor outside the current interval |
 | `sun_colors` | map with `night`, `morning`, `day`, `evening` | dark blue, orange, amber, purple | Sun ring: part of the day to colour |
-| `moon_lit_color` | colour | `"#C8D2FF"` | Lit part of the moon |
-| `moon_dark_color` | colour | `"#000000"` | Dark part of the moon |
+| `moon_lit_color` | colour | `"#C8D2FF"` | Lit LEDs on the Moon Phase, Moon Light and Full Moon rings |
+| `moon_dark_color` | colour | `"#000000"` | Unlit LEDs on the Moon Phase, Moon Light, Moon Position and Full Moon rings |
+| `moon_up_color` | colour | `"#C8D2FF"` | Moon above the horizon (Moon Up, Sun and Moon, Moon Position) |
+| `moon_down_color` | colour | `"#001040"` | Moon below the horizon (Moon Up, Moon Position) |
+| `sun_up_color` | colour | `"#FFB400"` | Sun and Moon ring: only the sun up |
+| `both_up_color` | colour | `"#FFFFFF"` | Sun and Moon ring: both up |
+| `none_up_color` | colour | `"#000000"` | Sun and Moon ring: neither up |
 
 The Sun ring's parts of the day come from `sun.sun`:
 
@@ -73,7 +79,12 @@ Outputs:
 | Sensor | Ring Mode |
 |---|---|
 | `sensor.sky_clock_sun_ring_colors` | Sun |
-| `sensor.sky_clock_moon_ring_colors` | Moon |
+| `sensor.sky_clock_moon_ring_colors` | Moon Phase |
+| `sensor.sky_clock_moon_up_ring_colors` | Moon Up |
+| `sensor.sky_clock_sun_and_moon_ring_colors` | Sun and Moon |
+| `sensor.sky_clock_moon_light_ring_colors` | Moon Light |
+| `sensor.sky_clock_moon_position_ring_colors` | Moon Position |
+| `sensor.sky_clock_full_moon_ring_colors` | Full Moon |
 
 ## AdGuard Clock
 

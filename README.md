@@ -10,7 +10,7 @@ Home Assistant works out one colour per LED and the clock draws them. What the r
 |---|---|---|---|
 | [Price Clock](examples/price-clock/) | Electricity spot price | A price sensor with 15 minute slots | 60 minutes, 15 minutes = 9 LEDs |
 | [Weather Clock](examples/weather-clock/) | Condition, temperature or rain | `weather.forecast_home`, in a default Home Assistant install | 12 hours, 1 hour = 3 LEDs |
-| [Sky Clock](examples/sky-clock/) | Night, dawn, day and dusk per hour, or the moon phase | `sun.sun` and `sensor.moon_phase` (Moon integration) | Sun: 12 hours, 1 hour = 3 LEDs. Moon: a quarter of the moon = 9 LEDs |
+| [Sky Clock](examples/sky-clock/) | Night, dawn, day and dusk per hour, moon phase, moonrise and moonset, moon light, moon position, days to full moon | `sun.sun`, `sensor.moon_phase` (Moon integration), and a moon sensor with rise, set and position for the extra moon rings | Sun: 12 hours, 1 hour = 3 LEDs. Moon: a quarter of the moon = 9 LEDs |
 | [AdGuard Clock](examples/adguard-clock/) | Share of DNS queries AdGuard Home blocks | `sensor.adguard_home_dns_queries_blocked_ratio` (AdGuard Home integration) | 100 percent, 25 percent = 9 LEDs |
 
 All examples run on the same hardware. Each example folder has its ESPHome config, its Home Assistant package and a README explaining what it shows.

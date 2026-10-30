@@ -4,18 +4,30 @@
 # configuration.yaml loads packages (see docs/getting-started/04-home-assistant.md).
 #
 # Uses:
-#   sun.sun           Sun, part of default_config
-#   sensor.moon_phase Moon integration (Settings > Devices & services >
-#                     Add integration > Moon, nothing to set up)
+#   sun.sun              Sun, part of default_config
+#   sensor.moon_phase    Moon integration (Settings > Devices & services >
+#                        Add integration > Moon, nothing to set up)
+#   moon_details_entity  A moon sensor with the attributes moonrise,
+#                        moonset, moon_azimuth_deg, moon_altitude_deg,
+#                        illumination_fraction and next_full_moon. The Moon
+#                        integration does not provide these; the last five
+#                        rings below need such a sensor.
 #
-# Creates two sensors, each 216 hex characters (36 LEDs x RRGGBB).
+# Creates seven sensors, each 216 hex characters (36 LEDs x RRGGBB).
 # The clock's "Ring Mode" select picks which one is shown:
-#   sensor.sky_clock_sun_ring_colors   Sun: 12 hours like the hour hand,
-#                                      3 LEDs per hour, each hour coloured
-#                                      by the part of the day
-#   sensor.sky_clock_moon_ring_colors  Moon: the lit part of the moon,
-#                                      crescent 9 LEDs, quarter 18,
-#                                      gibbous 27, full 36
+#   sensor.sky_clock_sun_ring_colors           Sun: part of the day per hour
+#   sensor.sky_clock_moon_ring_colors          Moon Phase: crescent 9 LEDs,
+#                                              quarter 18, gibbous 27, full 36
+#   sensor.sky_clock_moon_up_ring_colors       Moon Up: moon above the
+#                                              horizon per hour
+#   sensor.sky_clock_sun_and_moon_ring_colors  Sun and Moon: sun up, moon up
+#                                              or both per hour
+#   sensor.sky_clock_moon_light_ring_colors    Moon Light: lit share of the
+#                                              moon, 36 LEDs = 100 percent
+#   sensor.sky_clock_moon_position_ring_colors Moon Position: compass,
+#                                              12 = north, 10 degrees per LED
+#   sensor.sky_clock_full_moon_ring_colors     Full Moon: 1 LED per day left
+#                                              until the next full moon
 #
 # docs/guides/02-time-on-the-ring.md explains the time settings.
 
@@ -28,7 +40,12 @@ template:
     variables:
       moon_entity: sensor.moon_phase
 
-      # Sun ring: what the full ring means and the length of one interval.
+      # Moon sensor with rise, set, position, illumination and next full
+      # moon as attributes. Set this to your own sensor.
+      moon_details_entity: sensor.moon_details
+
+      # Sun, Moon Up and Sun and Moon rings: what the full ring means and
+      # the length of one interval.
       #   hours face:   60 (3 LEDs), 120 (6 LEDs), 180 (9 LEDs), 360 (18 LEDs)
       #   minutes face: 15 (9 LEDs) or 30 (18 LEDs)
       layout: hours
@@ -39,7 +56,8 @@ template:
       led_offset: 0
       clockwise: true
 
-      # Sun ring: brightness of every LED outside the current interval.
+      # Sun, Moon Up and Sun and Moon rings: brightness of every LED outside
+      # the current interval.
       # 1.0 = no dimming, 0.4 = 40 percent.
       dim_others: 0.4
 
@@ -52,9 +70,16 @@ template:
         day: "#FFB400"
         evening: "#8C28C8"
 
-      # Moon ring: lit and dark part of the moon.
+      # Moon Phase, Moon Light and Full Moon rings: lit and dark LEDs.
       moon_lit_color: "#C8D2FF"
       moon_dark_color: "#000000"
+
+      # Moon Up, Sun and Moon and Moon Position rings.
+      moon_up_color: "#C8D2FF"
+      moon_down_color: "#001040"
+      sun_up_color: "#FFB400"
+      both_up_color: "#FFFFFF"
+      none_up_color: "#000000"
     sensor:
       - name: "Sky Clock Sun Ring Colors"
         unique_id: sky_clock_sun_ring_colors
@@ -138,5 +163,171 @@ template:
           {%- for i in range(36) -%}
             {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
             {%- set o.s = o.s ~ (on if lit[0] <= pos <= lit[1] else off) -%}
+          {%- endfor -%}
+          {{ o.s | upper }}
+
+      - name: "Sky Clock Moon Up Ring Colors"
+        unique_id: sky_clock_moon_up_ring_colors
+        icon: mdi:weather-night
+        availability: >
+          {{ state_attr(moon_details_entity, 'moonrise') is not none
+             and state_attr(moon_details_entity, 'moonset') is not none }}
+        state: >
+          {%- macro scaled(hex, k) -%}
+            {%- set h = hex | string | replace('#', '') -%}
+            {{- '%02X%02X%02X' | format(
+                  ((h[0:2] | int(0, 16)) * k) | int,
+                  ((h[2:4] | int(0, 16)) * k) | int,
+                  ((h[4:6] | int(0, 16)) * k) | int) -}}
+          {%- endmacro -%}
+          {#- True if the body is up at time t. rise and set are the last
+              known rise and set; the same event repeats every period
+              seconds (sun 24 h, moon 24 h 50 min). -#}
+          {%- macro is_up(rise, down, period, t) -%}
+            {%- set last_rise = rise + ((t - rise) // period) * period -%}
+            {%- set last_down = down + ((t - down) // period) * period -%}
+            {{- 'yes' if last_rise > last_down else '' -}}
+          {%- endmacro -%}
+          {%- set rise = as_timestamp(state_attr(moon_details_entity, 'moonrise'), 0) -%}
+          {%- set down = as_timestamp(state_attr(moon_details_entity, 'moonset'), 0) -%}
+          {#- The face: 12 hours from the last midnight or noon, or 60
+              minutes from the start of this hour -#}
+          {%- set n = now() -%}
+          {%- set now_ts = as_timestamp(n) -%}
+          {%- set ring_s = 3600 if layout == 'minutes' else 43200 -%}
+          {%- set ring_start = as_timestamp(n.replace(minute=0, second=0, microsecond=0)) if layout == 'minutes'
+                else as_timestamp(n.replace(hour=(n.hour // 12) * 12, minute=0, second=0, microsecond=0)) -%}
+          {%- set iv = (interval_minutes | int(60)) * 60 -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {#- Place of this LED on the face, 0 at 12 o'clock -#}
+            {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+            {#- The interval at this place that has not ended yet -#}
+            {%- set t = ring_start + ((pos * ring_s // 36) // iv) * iv -%}
+            {%- if t + iv <= now_ts -%}{%- set t = t + ring_s -%}{%- endif -%}
+            {%- set is_now = t <= now_ts -%}
+            {#- The current interval looks up now, the others their start -#}
+            {%- set t = now_ts if is_now else t -%}
+            {%- set col = moon_up_color if is_up(rise, down, 89428, t) else moon_down_color -%}
+            {%- set o.s = o.s ~ scaled(col, 1.0 if is_now else dim_others | float(1)) -%}
+          {%- endfor -%}
+          {{ o.s }}
+
+      - name: "Sky Clock Sun and Moon Ring Colors"
+        unique_id: sky_clock_sun_and_moon_ring_colors
+        icon: mdi:theme-light-dark
+        availability: >
+          {{ state_attr(moon_details_entity, 'moonrise') is not none
+             and state_attr(moon_details_entity, 'moonset') is not none
+             and state_attr('sun.sun', 'next_rising') is not none
+             and state_attr('sun.sun', 'next_setting') is not none }}
+        state: >
+          {%- macro scaled(hex, k) -%}
+            {%- set h = hex | string | replace('#', '') -%}
+            {{- '%02X%02X%02X' | format(
+                  ((h[0:2] | int(0, 16)) * k) | int,
+                  ((h[2:4] | int(0, 16)) * k) | int,
+                  ((h[4:6] | int(0, 16)) * k) | int) -}}
+          {%- endmacro -%}
+          {#- True if the body is up at time t. rise and set are the last
+              known rise and set; the same event repeats every period
+              seconds (sun 24 h, moon 24 h 50 min). -#}
+          {%- macro is_up(rise, down, period, t) -%}
+            {%- set last_rise = rise + ((t - rise) // period) * period -%}
+            {%- set last_down = down + ((t - down) // period) * period -%}
+            {{- 'yes' if last_rise > last_down else '' -}}
+          {%- endmacro -%}
+          {%- set rise = as_timestamp(state_attr(moon_details_entity, 'moonrise'), 0) -%}
+          {%- set down = as_timestamp(state_attr(moon_details_entity, 'moonset'), 0) -%}
+          {%- set sunrise = as_timestamp(state_attr('sun.sun', 'next_rising'), 0) -%}
+          {%- set sunset = as_timestamp(state_attr('sun.sun', 'next_setting'), 0) -%}
+          {#- The face: 12 hours from the last midnight or noon, or 60
+              minutes from the start of this hour -#}
+          {%- set n = now() -%}
+          {%- set now_ts = as_timestamp(n) -%}
+          {%- set ring_s = 3600 if layout == 'minutes' else 43200 -%}
+          {%- set ring_start = as_timestamp(n.replace(minute=0, second=0, microsecond=0)) if layout == 'minutes'
+                else as_timestamp(n.replace(hour=(n.hour // 12) * 12, minute=0, second=0, microsecond=0)) -%}
+          {%- set iv = (interval_minutes | int(60)) * 60 -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {#- Place of this LED on the face, 0 at 12 o'clock -#}
+            {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+            {#- The interval at this place that has not ended yet -#}
+            {%- set t = ring_start + ((pos * ring_s // 36) // iv) * iv -%}
+            {%- if t + iv <= now_ts -%}{%- set t = t + ring_s -%}{%- endif -%}
+            {%- set is_now = t <= now_ts -%}
+            {#- The current interval looks up now, the others their start -#}
+            {%- set t = now_ts if is_now else t -%}
+            {%- set sun_up = is_up(sunrise, sunset, 86400, t) != '' -%}
+            {%- set moon_up = is_up(rise, down, 89428, t) != '' -%}
+            {%- if sun_up and moon_up -%}
+              {%- set col = both_up_color -%}
+            {%- elif sun_up -%}
+              {%- set col = sun_up_color -%}
+            {%- elif moon_up -%}
+              {%- set col = moon_up_color -%}
+            {%- else -%}
+              {%- set col = none_up_color -%}
+            {%- endif -%}
+            {%- set o.s = o.s ~ scaled(col, 1.0 if is_now else dim_others | float(1)) -%}
+          {%- endfor -%}
+          {{ o.s }}
+
+      - name: "Sky Clock Moon Light Ring Colors"
+        unique_id: sky_clock_moon_light_ring_colors
+        icon: mdi:moon-waxing-gibbous
+        availability: >
+          {{ is_number(state_attr(moon_details_entity, 'illumination_fraction')) }}
+        state: >
+          {#- Lit share of the moon: 36 LEDs = 100 percent, rounded -#}
+          {%- set f = state_attr(moon_details_entity, 'illumination_fraction') | float(0) -%}
+          {%- set lit = ([[f, 0] | max, 100] | min * 36 / 100) | round(0) | int -%}
+          {%- set on = moon_lit_color | string | replace('#', '') -%}
+          {%- set off = moon_dark_color | string | replace('#', '') -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+            {%- set o.s = o.s ~ (on if pos < lit else off) -%}
+          {%- endfor -%}
+          {{ o.s | upper }}
+
+      - name: "Sky Clock Moon Position Ring Colors"
+        unique_id: sky_clock_moon_position_ring_colors
+        icon: mdi:compass
+        availability: >
+          {{ is_number(state_attr(moon_details_entity, 'moon_azimuth_deg'))
+             and is_number(state_attr(moon_details_entity, 'moon_altitude_deg')) }}
+        state: >
+          {#- Compass: 0 degrees (north) at 12 o'clock, 10 degrees per LED -#}
+          {%- set az = state_attr(moon_details_entity, 'moon_azimuth_deg') | float(0) -%}
+          {%- set alt = state_attr(moon_details_entity, 'moon_altitude_deg') | float(0) -%}
+          {%- set spot = ((az / 10 + 0.5) | int) % 36 -%}
+          {%- set m = (moon_up_color if alt >= 0 else moon_down_color) | string | replace('#', '') -%}
+          {%- set off = moon_dark_color | string | replace('#', '') -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+            {%- set o.s = o.s ~ (m if pos == spot else off) -%}
+          {%- endfor -%}
+          {{ o.s | upper }}
+
+      - name: "Sky Clock Full Moon Ring Colors"
+        unique_id: sky_clock_full_moon_ring_colors
+        icon: mdi:moon-full
+        availability: >
+          {{ as_timestamp(state_attr(moon_details_entity, 'next_full_moon'), 0) > 0 }}
+        state: >
+          {#- 1 LED per day left until the next full moon, started days
+              count as whole days -#}
+          {%- set full = as_timestamp(state_attr(moon_details_entity, 'next_full_moon'), 0) -%}
+          {%- set days = ((full - as_timestamp(now())) / 86400) | round(0, 'ceil') | int -%}
+          {%- set days = [[days, 0] | max, 36] | min -%}
+          {%- set on = moon_lit_color | string | replace('#', '') -%}
+          {%- set off = moon_dark_color | string | replace('#', '') -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+            {%- set o.s = o.s ~ (on if pos < days else off) -%}
           {%- endfor -%}
           {{ o.s | upper }}

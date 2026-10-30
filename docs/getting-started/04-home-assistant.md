@@ -34,6 +34,7 @@ Each package reads one or two entities. Make sure they exist under Developer too
 | Weather Clock | `weather_entity` | `weather.forecast_home` | Created by Met.no during onboarding. The ID follows the location name chosen then, so it can differ |
 | Sky Clock | (fixed) | `sun.sun` | Always present, part of `default_config` |
 | Sky Clock | `moon_entity` | `sensor.moon_phase` | Add the Moon integration: Settings > Devices & services > Add integration > Moon. It needs no setup |
+| Sky Clock | `moon_details_entity` | `sensor.moon_details` | Your own moon sensor with rise, set, position, illumination and next full moon. See the [Sky Clock README](../../examples/sky-clock/README.md#data-sources) |
 | AdGuard Clock | `ratio_entity` | `sensor.adguard_home_dns_queries_blocked_ratio` | Add the AdGuard Home integration. With more than one AdGuard Home server, the second one's sensors get `_2` at the end |
 
 ## Restart and confirm
@@ -49,7 +50,12 @@ Each package reads one or two entities. Make sure they exist under Developer too
 | Weather Clock | `sensor.weather_clock_temperature_ring_colors` | Temperature |
 | Weather Clock | `sensor.weather_clock_rain_ring_colors` | Rain |
 | Sky Clock | `sensor.sky_clock_sun_ring_colors` | Sun |
-| Sky Clock | `sensor.sky_clock_moon_ring_colors` | Moon |
+| Sky Clock | `sensor.sky_clock_moon_ring_colors` | Moon Phase |
+| Sky Clock | `sensor.sky_clock_moon_up_ring_colors` | Moon Up |
+| Sky Clock | `sensor.sky_clock_sun_and_moon_ring_colors` | Sun and Moon |
+| Sky Clock | `sensor.sky_clock_moon_light_ring_colors` | Moon Light |
+| Sky Clock | `sensor.sky_clock_moon_position_ring_colors` | Moon Position |
+| Sky Clock | `sensor.sky_clock_full_moon_ring_colors` | Full Moon |
 | AdGuard Clock | `sensor.adguard_clock_ring_colors` | (only ring) |
 
 All sensors update once a minute. The Weather Clock gets its forecast through the `weather.get_forecasts` action, which returns the Met.no integration's stored forecast, so this adds no extra requests to Met.no.

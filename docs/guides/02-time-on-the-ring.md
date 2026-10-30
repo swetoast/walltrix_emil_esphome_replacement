@@ -32,7 +32,7 @@ The examples use:
 |---|---|---|---|
 | Price Clock | `minutes` | 15 | 9 |
 | Weather Clock | `hours` | 60 | 3 |
-| Sky Clock, Sun ring | `hours` | 60 | 3 |
+| Sky Clock, Sun, Moon Up and Sun and Moon rings | `hours` | 60 | 3 |
 
 ## Which interval an LED shows
 
@@ -122,13 +122,16 @@ Then reload with Developer tools > YAML > Template entities. The ring changes wi
 
 ## Rings that do not show time
 
-The Sky Clock's Moon ring and the AdGuard Clock use the same 36 LEDs, but not for time.
+Some rings use the same 36 LEDs, but not for time.
 
 | Ring | The full ring is | One quarter (9 LEDs) is | One LED is |
 |---|---|---|---|
-| Sky Clock, Moon | The whole moon | A quarter of the moon | |
+| Sky Clock, Moon Phase | The whole moon | A quarter of the moon | |
+| Sky Clock, Moon Light | 100 percent lit | 25 percent | 1/36 of the moon |
+| Sky Clock, Moon Position | A compass, 12 = north, 3 = east, 6 = south, 9 = west | 90 degrees | 10 degrees |
+| Sky Clock, Full Moon | 36 days | 9 days | 1 day |
 | AdGuard Clock | 100 percent of the DNS queries | 25 percent | 1/36 of the queries |
 
-They use `led_offset` and `clockwise` the same way, so 12 o'clock is the start of the moon and the start of the blocked share. The Sky Clock's Sun ring shows time like the Weather Clock: 12 hours, 3 LEDs per hour. See the [Sky Clock](../../examples/sky-clock/README.md) and [AdGuard Clock](../../examples/adguard-clock/README.md) READMEs.
+They use `led_offset` and `clockwise` the same way, so 12 o'clock is north, the start of the moon and the start of the blocked share. The Sky Clock's Sun, Moon Up and Sun and Moon rings show time like the Weather Clock: 12 hours, 3 LEDs per hour. See the [Sky Clock](../../examples/sky-clock/README.md) and [AdGuard Clock](../../examples/adguard-clock/README.md) READMEs.
 
 Next: [Colours](03-colours.md)
