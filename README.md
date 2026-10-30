@@ -42,6 +42,7 @@ Both examples run on the same hardware. Each example folder has its ESPHome conf
 ```
 .
 ├── README.md
+├── LICENSE                     MIT
 ├── docs/
 │   ├── getting-started/        Hardware, backup, flashing, Home Assistant
 │   ├── guides/                 Time on the ring, colours, brightness, your own ring
@@ -68,3 +69,7 @@ Both examples run on the same hardware. Each example folder has its ESPHome conf
 3. [Flash](docs/getting-started/03-first-flash.md) `price-clock.yaml` or `weather-clock.yaml` over USB. Later updates go over WiFi.
 4. Copy the matching package to `/config/packages/` and restart Home Assistant ([details](docs/getting-started/04-home-assistant.md)).
 5. Add the clock in Home Assistant when it is discovered, using your `api_key`.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
