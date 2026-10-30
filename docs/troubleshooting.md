@@ -61,8 +61,8 @@ Enter `api_key` from `secrets.yaml`. It must be exactly the key the clock was bu
 
 ## A wireless update is refused
 
-- A clock built from the earlier version of this repository uses an OTA password. Flash once over USB, see [Upgrading](upgrading.md#ota-updates).
 - Check that `api_key` in `secrets.yaml` has not changed since the last install. OTA uses the same key.
+- If it still fails, install once over USB as in [First flash](getting-started/03-first-flash.md). Updates after that work over WiFi again.
 
 ## The clock keeps restarting
 

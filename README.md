@@ -35,7 +35,6 @@ Both examples run on the same hardware. Each example folder has its ESPHome conf
 
 **Help**
 - [Troubleshooting](docs/troubleshooting.md)
-- [Upgrading from the earlier layout](docs/upgrading.md)
 
 ## Repository layout
 
@@ -47,8 +46,7 @@ Both examples run on the same hardware. Each example folder has its ESPHome conf
 │   ├── getting-started/        Hardware, backup, flashing, Home Assistant
 │   ├── guides/                 Time on the ring, colours, brightness, your own ring
 │   ├── reference/              Every entity and every package setting
-│   ├── troubleshooting.md
-│   └── upgrading.md
+│   └── troubleshooting.md
 ├── examples/
 │   ├── secrets.example.yaml    Template for secrets.yaml
 │   ├── price-clock/
