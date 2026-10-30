@@ -9,9 +9,11 @@ Home Assistant works out one colour per LED and the clock draws them. What the r
 | Example | Shows | Data from | Ring |
 |---|---|---|---|
 | [Price Clock](examples/price-clock/) | Electricity spot price | A price sensor with 15 minute slots | 60 minutes, 15 minutes = 9 LEDs |
-| [Weather Clock](examples/weather-clock/) | Condition, temperature, rain or daylight | `weather.forecast_home` and `sun.sun`, both in a default Home Assistant install | 12 hours, 1 hour = 3 LEDs |
+| [Weather Clock](examples/weather-clock/) | Condition, temperature or rain | `weather.forecast_home`, in a default Home Assistant install | 12 hours, 1 hour = 3 LEDs |
+| [Sky Clock](examples/sky-clock/) | Night, dawn, day and dusk per hour, or the moon phase | `sun.sun` and `sensor.moon_phase` (Moon integration) | Sun: 12 hours, 1 hour = 3 LEDs. Moon: a quarter of the moon = 9 LEDs |
+| [AdGuard Clock](examples/adguard-clock/) | Share of DNS queries AdGuard Home blocks | `sensor.adguard_home_dns_queries_blocked_ratio` (AdGuard Home integration) | 100 percent, 25 percent = 9 LEDs |
 
-Both examples run on the same hardware. Each example folder has its ESPHome config, its Home Assistant package and a README explaining what it shows.
+All examples run on the same hardware. Each example folder has its ESPHome config, its Home Assistant package and a README explaining what it shows.
 
 ## Documentation
 
@@ -54,10 +56,18 @@ Both examples run on the same hardware. Each example folder has its ESPHome conf
 │   │   ├── README.md
 │   │   ├── esphome/price-clock.yaml
 │   │   └── homeassistant/price_clock.yaml
-│   └── weather-clock/
+│   ├── weather-clock/
+│   │   ├── README.md
+│   │   ├── esphome/weather-clock.yaml
+│   │   └── homeassistant/weather_clock.yaml
+│   ├── sky-clock/
+│   │   ├── README.md
+│   │   ├── esphome/sky-clock.yaml
+│   │   └── homeassistant/sky_clock.yaml
+│   └── adguard-clock/
 │       ├── README.md
-│       ├── esphome/weather-clock.yaml
-│       └── homeassistant/weather_clock.yaml
+│       ├── esphome/adguard-clock.yaml
+│       └── homeassistant/adguard_clock.yaml
 └── tests/                      Offline check of the Home Assistant templates
 ```
 
@@ -65,7 +75,7 @@ Both examples run on the same hardware. Each example folder has its ESPHome conf
 
 1. [Back up the original firmware](docs/getting-started/02-backup-and-restore.md). Do not skip this.
 2. Copy `examples/secrets.example.yaml` to `secrets.yaml` and fill it in.
-3. [Flash](docs/getting-started/03-first-flash.md) `price-clock.yaml` or `weather-clock.yaml` over USB. Later updates go over WiFi.
+3. [Flash](docs/getting-started/03-first-flash.md) the ESPHome config of one example over USB. Later updates go over WiFi.
 4. Copy the matching package to `/config/packages/` and restart Home Assistant ([details](docs/getting-started/04-home-assistant.md)).
 5. Add the clock in Home Assistant when it is discovered, using your `api_key`.
 

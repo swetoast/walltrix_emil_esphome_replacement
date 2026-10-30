@@ -4,7 +4,9 @@ Every setting in the `variables:` section of the example packages. The guides ex
 
 After editing, reload with Developer tools > YAML > Template entities.
 
-## Shared by both packages
+## Price Clock and Weather Clock time settings
+
+The Sky Clock's Sun ring uses the same time settings, see [Sky Clock](#sky-clock).
 
 | Setting | Type | Price Clock default | Weather Clock default | Description |
 |---|---|---|---|---|
@@ -34,7 +36,6 @@ Output: `sensor.price_clock_ring_colors`
 | `temperature_colors` | gradient list | 9 steps from `[-15, "#4000FF"]` to `[30, "#FF0000"]` | °C to colour, blended between steps |
 | `rain_colors` | step list | 5 steps from `[0, "#0A0A0A"]` to `[5, "#8000FF"]` | mm per hour to colour, highest step reached |
 | `snow_color` | colour | `"#FFFFFF"` | Used instead of `rain_colors` when there is at least 0.1 mm at 0 °C or colder. The 0.1 mm limit is fixed in the template. |
-| `sun_colors` | map with `night`, `morning`, `day`, `evening` | dark blue, orange, amber, purple | Part of the day to colour |
 
 Outputs:
 
@@ -43,9 +44,22 @@ Outputs:
 | `sensor.weather_clock_condition_ring_colors` | Condition |
 | `sensor.weather_clock_temperature_ring_colors` | Temperature |
 | `sensor.weather_clock_rain_ring_colors` | Rain |
-| `sensor.weather_clock_sun_ring_colors` | Sun |
 
-The sun ring's parts of the day come from `sun.sun`:
+## Sky Clock
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `moon_entity` | entity ID | `sensor.moon_phase` | Moon phase sensor from the Moon integration |
+| `layout` | `minutes` or `hours` | `hours` | Sun ring: the full ring is 60 minutes or 12 hours |
+| `interval_minutes` | `minutes`: 15 or 30. `hours`: 60, 120, 180 or 360 | `60` | Sun ring: length of one interval |
+| `led_offset` | 0 to 35 | `0` | The LED under 12 o'clock |
+| `clockwise` | `true` or `false` | `true` | LED numbers go up clockwise |
+| `dim_others` | 0.0 to 1.0 | `0.4` | Sun ring: brightness factor outside the current interval |
+| `sun_colors` | map with `night`, `morning`, `day`, `evening` | dark blue, orange, amber, purple | Sun ring: part of the day to colour |
+| `moon_lit_color` | colour | `"#C8D2FF"` | Lit part of the moon |
+| `moon_dark_color` | colour | `"#000000"` | Dark part of the moon |
+
+The Sun ring's parts of the day come from `sun.sun`:
 
 | Part | From | To |
 |---|---|---|
@@ -53,6 +67,25 @@ The sun ring's parts of the day come from `sun.sun`:
 | `day` | sunrise | sunset (`next_setting`) |
 | `evening` | sunset | dusk (`next_dusk`) |
 | `night` | dusk | dawn |
+
+Outputs:
+
+| Sensor | Ring Mode |
+|---|---|
+| `sensor.sky_clock_sun_ring_colors` | Sun |
+| `sensor.sky_clock_moon_ring_colors` | Moon |
+
+## AdGuard Clock
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `ratio_entity` | entity ID | `sensor.adguard_home_dns_queries_blocked_ratio` | AdGuard Home sensor with the share of blocked DNS queries in percent |
+| `led_offset` | 0 to 35 | `0` | The LED under 12 o'clock, where the blocked share starts |
+| `clockwise` | `true` or `false` | `true` | LED numbers go up clockwise |
+| `blocked_color` | colour | `"#FF0080"` | LEDs for blocked queries |
+| `allowed_color` | colour | `"#00BFFF"` | LEDs for allowed queries |
+
+Output: `sensor.adguard_clock_ring_colors`
 
 ## Value types
 
@@ -66,7 +99,7 @@ The sun ring's parts of the day come from `sun.sun`:
 
 ## Triggers
 
-Both packages are trigger-based template sensors that update:
+All packages are trigger-based template sensors that update:
 
 - when Home Assistant starts
 - every minute (`time_pattern`, `minutes: "/1"`)

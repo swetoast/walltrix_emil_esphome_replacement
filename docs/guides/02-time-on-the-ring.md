@@ -32,6 +32,7 @@ The examples use:
 |---|---|---|---|
 | Price Clock | `minutes` | 15 | 9 |
 | Weather Clock | `hours` | 60 | 3 |
+| Sky Clock, Sun ring | `hours` | 60 | 3 |
 
 ## Which interval an LED shows
 
@@ -91,7 +92,7 @@ The package must know which LED sits under 12 o'clock and which way the LEDs are
 2. Three LEDs light up: white is LED 0, red is LED 1, green is LED 2.
 3. Note the numeral the white LED sits under, and whether red is clockwise from white.
 4. Look up the settings below.
-5. Switch the effect back to Price Ring or Weather Ring.
+5. Switch the effect back to the clock's ring effect (Price Ring, Weather Ring, Sky Ring or AdGuard Ring).
 
 | White LED under | Red LED is | `clockwise` | `led_offset` |
 |---|---|---|---|
@@ -118,5 +119,16 @@ Edit the `variables:` section at the top of the package:
 ```
 
 Then reload with Developer tools > YAML > Template entities. The ring changes within a minute.
+
+## Rings that do not show time
+
+The Sky Clock's Moon ring and the AdGuard Clock use the same 36 LEDs, but not for time.
+
+| Ring | The full ring is | One quarter (9 LEDs) is | One LED is |
+|---|---|---|---|
+| Sky Clock, Moon | The whole moon | A quarter of the moon | |
+| AdGuard Clock | 100 percent of the DNS queries | 25 percent | 1/36 of the queries |
+
+They use `led_offset` and `clockwise` the same way, so 12 o'clock is the start of the moon and the start of the blocked share. The Sky Clock's Sun ring shows time like the Weather Clock: 12 hours, 3 LEDs per hour. See the [Sky Clock](../../examples/sky-clock/README.md) and [AdGuard Clock](../../examples/adguard-clock/README.md) READMEs.
 
 Next: [Colours](03-colours.md)

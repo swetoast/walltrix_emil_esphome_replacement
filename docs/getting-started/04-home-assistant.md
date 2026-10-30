@@ -19,6 +19,8 @@ If you already have a `homeassistant:` section, add only the `packages:` line in
 |---|---|---|
 | Price Clock | `examples/price-clock/homeassistant/price_clock.yaml` | `/config/packages/price_clock.yaml` |
 | Weather Clock | `examples/weather-clock/homeassistant/weather_clock.yaml` | `/config/packages/weather_clock.yaml` |
+| Sky Clock | `examples/sky-clock/homeassistant/sky_clock.yaml` | `/config/packages/sky_clock.yaml` |
+| AdGuard Clock | `examples/adguard-clock/homeassistant/adguard_clock.yaml` | `/config/packages/adguard_clock.yaml` |
 
 A package carries its own `template:` section, so it does not clash with templates already in `configuration.yaml`.
 
@@ -30,7 +32,9 @@ Each package reads one or two entities. Make sure they exist under Developer too
 |---|---|---|---|
 | Price Clock | `price_entity` | `sensor.swedish_spot_price_elpris_se3_forecast` | Needs `today` and `tomorrow` attributes, see the [Price Clock README](../../examples/price-clock/README.md#data-source) |
 | Weather Clock | `weather_entity` | `weather.forecast_home` | Created by Met.no during onboarding. The ID follows the location name chosen then, so it can differ |
-| Weather Clock | (fixed) | `sun.sun` | Always present, part of `default_config` |
+| Sky Clock | (fixed) | `sun.sun` | Always present, part of `default_config` |
+| Sky Clock | `moon_entity` | `sensor.moon_phase` | Add the Moon integration: Settings > Devices & services > Add integration > Moon. It needs no setup |
+| AdGuard Clock | `ratio_entity` | `sensor.adguard_home_dns_queries_blocked_ratio` | Add the AdGuard Home integration. With more than one AdGuard Home server, the second one's sensors get `_2` at the end |
 
 ## Restart and confirm
 
@@ -44,7 +48,9 @@ Each package reads one or two entities. Make sure they exist under Developer too
 | Weather Clock | `sensor.weather_clock_condition_ring_colors` | Condition |
 | Weather Clock | `sensor.weather_clock_temperature_ring_colors` | Temperature |
 | Weather Clock | `sensor.weather_clock_rain_ring_colors` | Rain |
-| Weather Clock | `sensor.weather_clock_sun_ring_colors` | Sun |
+| Sky Clock | `sensor.sky_clock_sun_ring_colors` | Sun |
+| Sky Clock | `sensor.sky_clock_moon_ring_colors` | Moon |
+| AdGuard Clock | `sensor.adguard_clock_ring_colors` | (only ring) |
 
 All sensors update once a minute. The Weather Clock gets its forecast through the `weather.get_forecasts` action, which returns the Met.no integration's stored forecast, so this adds no extra requests to Met.no.
 

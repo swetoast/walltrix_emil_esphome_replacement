@@ -1,6 +1,6 @@
 # Weather Clock
 
-Shows the weather for the coming 12 hours, 3 LEDs per hour, using only what a default Home Assistant install provides: the Met.no forecast and the Sun integration. No extra integrations or helper sensors are needed.
+Shows the weather for the coming 12 hours, 3 LEDs per hour, from the Met.no forecast that a default Home Assistant install provides. No extra integrations or helper sensors are needed.
 
 ## Files
 
@@ -14,15 +14,15 @@ Shows the weather for the coming 12 hours, 3 LEDs per hour, using only what a de
 | Entity | Comes from | Used for |
 |---|---|---|
 | `weather.forecast_home` | Met.no, set up automatically during Home Assistant onboarding | Condition, temperature and rain, from the hourly forecast |
-| `sun.sun` | Sun, part of `default_config` | Sun ring, and the clock's Auto Brightness |
+| `sun.sun` | Sun, part of `default_config` | The clock's Auto Brightness |
 
 Met.no names the weather entity after the location name chosen during setup. If yours is not `weather.forecast_home`, change `weather_entity` at the top of the package.
 
-## Four rings
+## Three rings
 
 Pick one with the Ring Mode select on the clock's device page.
 
-All four rings are 12 hours, read like the hour hand. One forecast hour is 3 LEDs:
+All three rings are 12 hours, read like the hour hand. One forecast hour is 3 LEDs:
 
 - Each hour lights the 3 LEDs at its place on the face: 07:00 to 08:00 lights the 3 LEDs from the 7 to the 8.
 - An hour that has ended shows the same hour 12 hours later, so the ring always holds the coming 12 hours.
@@ -82,19 +82,6 @@ Precipitation per hour, in bands:
 | 2 to 5 | Deep blue `#0020FF` |
 | 5 or more | Purple `#8000FF` |
 | 0.1 or more at 0 °C or colder | Snow, white `#FFFFFF` |
-
-### Sun
-
-The part of the day at each LED's time:
-
-| Part | From | To | Colour |
-|---|---|---|---|
-| Night | dusk | dawn | Dark blue `#001040` |
-| Morning | dawn | sunrise | Orange `#FF5A1E` |
-| Day | sunrise | sunset | Amber `#FFB400` |
-| Evening | sunset | dusk | Purple `#8C28C8` |
-
-The sun ring shows where night, dawn, daylight and dusk fall over the next 12 hours, each at its place on the face.
 
 ## Common changes
 

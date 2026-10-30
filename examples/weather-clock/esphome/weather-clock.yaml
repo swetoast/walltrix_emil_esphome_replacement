@@ -1,11 +1,10 @@
 # Weather Clock: ESPHome firmware for the Walltrix Emil wall clock
 #
-# Draws one of four rings made by the Home Assistant package
+# Draws one of three rings made by the Home Assistant package
 # homeassistant/weather_clock.yaml. The Ring Mode select picks which:
 #   Condition    sensor.weather_clock_condition_ring_colors
 #   Temperature  sensor.weather_clock_temperature_ring_colors
 #   Rain         sensor.weather_clock_rain_ring_colors
-#   Sun          sensor.weather_clock_sun_ring_colors
 #
 # Needs secrets.yaml with wifi_ssid, wifi_password, ap_password and api_key
 # (see ../../secrets.example.yaml).
@@ -57,14 +56,14 @@ debug:
 
 globals:
   - id: src_hash
-    type: uint32_t[4]
-    initial_value: '{0, 0, 0, 0}'
+    type: uint32_t[3]
+    initial_value: '{0, 0, 0}'
   - id: src_changed_ms
-    type: uint32_t[4]
-    initial_value: '{0, 0, 0, 0}'
+    type: uint32_t[3]
+    initial_value: '{0, 0, 0}'
   - id: src_seen
-    type: bool[4]
-    initial_value: '{false, false, false, false}'
+    type: bool[3]
+    initial_value: '{false, false, false}'
 
 time:
   - platform: homeassistant
@@ -125,23 +124,6 @@ text_sensor:
               id(src_seen)[2] = true;
             }
         - component.update: ring_data_age
-  - platform: homeassistant
-    id: sun_colors
-    entity_id: sensor.weather_clock_sun_ring_colors
-    on_value:
-      then:
-        - lambda: |-
-            uint32_t h = 2166136261u;
-            for (char c : x) {
-              h ^= (uint8_t) c;
-              h *= 16777619u;
-            }
-            if (!id(src_seen)[3] || h != id(src_hash)[3]) {
-              id(src_hash)[3] = h;
-              id(src_changed_ms)[3] = millis();
-              id(src_seen)[3] = true;
-            }
-        - component.update: ring_data_age
   - platform: version
     name: "ESPHome Version"
     hide_timestamp: true
@@ -171,7 +153,6 @@ binary_sensor:
       size_t m = id(ring_mode).active_index().value_or(0);
       const std::string &s = m == 1 ? id(temperature_colors).state
                            : m == 2 ? id(rain_colors).state
-                           : m == 3 ? id(sun_colors).state
                                     : id(condition_colors).state;
       return s.length() >= 216;
 
@@ -184,7 +165,6 @@ select:
       - "Condition"
       - "Temperature"
       - "Rain"
-      - "Sun"
     initial_option: "Condition"
     optimistic: true
     restore_value: true
@@ -297,7 +277,6 @@ light:
             size_t m = id(ring_mode).active_index().value_or(0);
             const std::string &s = m == 1 ? id(temperature_colors).state
                                  : m == 2 ? id(rain_colors).state
-                                 : m == 3 ? id(sun_colors).state
                                           : id(condition_colors).state;
             if (s.length() < 216)
               return;
@@ -370,7 +349,7 @@ sensor:
     update_interval: 60s
     lambda: |-
       size_t m = id(ring_mode).active_index().value_or(0);
-      if (m > 3 || !id(src_seen)[m])
+      if (m > 2 || !id(src_seen)[m])
         return {};
       return (millis() - id(src_changed_ms)[m]) / 60000.0f;
   - platform: template

@@ -25,7 +25,13 @@ In a terminal with colour support, each ring is drawn as a row of 36 coloured bl
 | Weather Clock default at 07:23 | The 3 LEDs from the 7 to the 8 are 07:00 and bright, the 3 from the 8 to the 9 are 08:00 and dimmed |
 | Weather Clock when the forecast starts at the next hour | The current hour does not go dark |
 | Weather Clock with only 5 forecast hours | 18:00 (6 to 7) uses `no_data_color` |
-| Weather Clock when the forecast call failed | Forecast rings unavailable, Sun ring still works |
+| Weather Clock when the forecast call failed | All three rings unavailable |
+| Sky Clock Sun ring, every allowed `layout` and `interval_minutes` | Each interval's LEDs are one colour |
+| Sky Clock Sun ring at 07:23 | The 7 is morning and bright, the 8 and the 4 are day, the 5 is evening, the 6 is night |
+| Sky Clock, all 8 moon phases | 0, 9, 18, 27 or 36 LEDs lit, from the right place on the face |
+| Sky Clock without `sensor.moon_phase` | Moon ring unavailable |
+| AdGuard Clock at 0, 7.89, 25, 50 and 100 percent | 0, 3, 9, 18 and 36 blocked LEDs, the rest allowed |
+| AdGuard Clock without AdGuard Home | Sensor unavailable |
 
 The script exits with an error if any check fails.
 

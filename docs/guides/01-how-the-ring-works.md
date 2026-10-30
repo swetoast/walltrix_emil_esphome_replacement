@@ -37,7 +37,7 @@ Home Assistant allows a state of up to 255 characters, so 216 fits.
 
 ## What the clock does with it
 
-Every second the Price Ring or Weather Ring effect:
+Every second the clock's ring effect (Price Ring, Weather Ring, Sky Ring or AdGuard Ring):
 
 1. Checks the string is at least 216 characters. If not (for example `unavailable`), it changes nothing and the LEDs keep their last colours.
 2. Splits it into 36 colours.

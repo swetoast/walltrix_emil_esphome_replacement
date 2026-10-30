@@ -1,0 +1,142 @@
+# Sky Clock: daylight and moon phase rings
+#
+# Home Assistant package. Copy this file to /config/packages/ and make sure
+# configuration.yaml loads packages (see docs/getting-started/04-home-assistant.md).
+#
+# Uses:
+#   sun.sun           Sun, part of default_config
+#   sensor.moon_phase Moon integration (Settings > Devices & services >
+#                     Add integration > Moon, nothing to set up)
+#
+# Creates two sensors, each 216 hex characters (36 LEDs x RRGGBB).
+# The clock's "Ring Mode" select picks which one is shown:
+#   sensor.sky_clock_sun_ring_colors   Sun: 12 hours like the hour hand,
+#                                      3 LEDs per hour, each hour coloured
+#                                      by the part of the day
+#   sensor.sky_clock_moon_ring_colors  Moon: the lit part of the moon,
+#                                      crescent 9 LEDs, quarter 18,
+#                                      gibbous 27, full 36
+#
+# docs/guides/02-time-on-the-ring.md explains the time settings.
+
+template:
+  - triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: time_pattern
+        minutes: "/1"
+    variables:
+      moon_entity: sensor.moon_phase
+
+      # Sun ring: what the full ring means and the length of one interval.
+      #   hours face:   60 (3 LEDs), 120 (6 LEDs), 180 (9 LEDs), 360 (18 LEDs)
+      #   minutes face: 15 (9 LEDs) or 30 (18 LEDs)
+      layout: hours
+      interval_minutes: 60
+
+      # Which LED sits at 12 o'clock, and whether LED numbers increase
+      # clockwise. Find them with the LED Index Test effect.
+      led_offset: 0
+      clockwise: true
+
+      # Sun ring: brightness of every LED outside the current interval.
+      # 1.0 = no dimming, 0.4 = 40 percent.
+      dim_others: 0.4
+
+      # Sun ring: one colour per part of the day.
+      #   morning = dawn to sunrise, day = sunrise to sunset,
+      #   evening = sunset to dusk, night = dusk to dawn
+      sun_colors:
+        night: "#001040"
+        morning: "#FF5A1E"
+        day: "#FFB400"
+        evening: "#8C28C8"
+
+      # Moon ring: lit and dark part of the moon.
+      moon_lit_color: "#C8D2FF"
+      moon_dark_color: "#000000"
+    sensor:
+      - name: "Sky Clock Sun Ring Colors"
+        unique_id: sky_clock_sun_ring_colors
+        icon: mdi:weather-sunset
+        availability: >
+          {{ state_attr('sun.sun', 'next_rising') is not none
+             and state_attr('sun.sun', 'next_setting') is not none }}
+        state: >
+          {%- macro scaled(hex, k) -%}
+            {%- set h = hex | string | replace('#', '') -%}
+            {{- '%02X%02X%02X' | format(
+                  ((h[0:2] | int(0, 16)) * k) | int,
+                  ((h[2:4] | int(0, 16)) * k) | int,
+                  ((h[4:6] | int(0, 16)) * k) | int) -}}
+          {%- endmacro -%}
+          {#- Next time each part of the day starts. The same event happens
+              again every 24 hours, close enough for a 36 LED ring. -#}
+          {%- set events = [
+                ('morning', as_timestamp(state_attr('sun.sun', 'next_dawn'), 0)),
+                ('day', as_timestamp(state_attr('sun.sun', 'next_rising'), 0)),
+                ('evening', as_timestamp(state_attr('sun.sun', 'next_setting'), 0)),
+                ('night', as_timestamp(state_attr('sun.sun', 'next_dusk'), 0))
+              ] -%}
+          {#- The face: 12 hours from the last midnight or noon, or 60
+              minutes from the start of this hour -#}
+          {%- set n = now() -%}
+          {%- set now_ts = as_timestamp(n) -%}
+          {%- set ring_s = 3600 if layout == 'minutes' else 43200 -%}
+          {%- set ring_start = as_timestamp(n.replace(minute=0, second=0, microsecond=0)) if layout == 'minutes'
+                else as_timestamp(n.replace(hour=(n.hour // 12) * 12, minute=0, second=0, microsecond=0)) -%}
+          {%- set iv = (interval_minutes | int(60)) * 60 -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {#- Place of this LED on the face, 0 at 12 o'clock -#}
+            {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+            {#- The interval at this place that has not ended yet -#}
+            {%- set t = ring_start + ((pos * ring_s // 36) // iv) * iv -%}
+            {%- if t + iv <= now_ts -%}{%- set t = t + ring_s -%}{%- endif -%}
+            {%- set is_now = t <= now_ts -%}
+            {#- The current interval looks up now, the others their start -#}
+            {%- set t = now_ts if is_now else t -%}
+            {#- The part of the day that started most recently before t -#}
+            {%- set ph = namespace(best=none, part='night') -%}
+            {%- for part, ts in events -%}
+              {%- if ts > 0 -%}
+                {%- set last = ts + ((t - ts) // 86400) * 86400 -%}
+                {%- if ph.best is none or last > ph.best -%}
+                  {%- set ph.best = last -%}
+                  {%- set ph.part = part -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- set o.s = o.s ~ scaled(sun_colors[ph.part], 1.0 if is_now else dim_others | float(1)) -%}
+          {%- endfor -%}
+          {{ o.s }}
+
+      - name: "Sky Clock Moon Ring Colors"
+        unique_id: sky_clock_moon_ring_colors
+        icon: mdi:moon-waxing-crescent
+        availability: >
+          {{ states(moon_entity) in ['new_moon', 'waxing_crescent', 'first_quarter',
+             'waxing_gibbous', 'full_moon', 'waning_gibbous', 'last_quarter',
+             'waning_crescent'] }}
+        state: >
+          {#- Lit part of the ring per phase: first and last place on the
+              face, 0 at 12 o'clock. Waxing fills clockwise from 12,
+              waning empties clockwise from 12. -#}
+          {%- set lit = {
+                'new_moon': [0, -1],
+                'waxing_crescent': [0, 8],
+                'first_quarter': [0, 17],
+                'waxing_gibbous': [0, 26],
+                'full_moon': [0, 35],
+                'waning_gibbous': [9, 35],
+                'last_quarter': [18, 35],
+                'waning_crescent': [27, 35]
+              }.get(states(moon_entity), [0, -1]) -%}
+          {%- set on = moon_lit_color | string | replace('#', '') -%}
+          {%- set off = moon_dark_color | string | replace('#', '') -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+            {%- set o.s = o.s ~ (on if lit[0] <= pos <= lit[1] else off) -%}
+          {%- endfor -%}
+          {{ o.s | upper }}

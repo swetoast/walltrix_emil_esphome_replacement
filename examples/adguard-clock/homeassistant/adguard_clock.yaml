@@ -1,0 +1,53 @@
+# AdGuard Clock: AdGuard Home blocked ratio ring
+#
+# Home Assistant package. Copy this file to /config/packages/ and make sure
+# configuration.yaml loads packages (see docs/getting-started/04-home-assistant.md).
+#
+# Needs the AdGuard Home integration (Settings > Devices & services >
+# Add integration > AdGuard Home).
+#
+# Creates sensor.adguard_clock_ring_colors: 216 hex characters, one RRGGBB
+# colour per LED, which the clock reads and shows on its 36 LEDs.
+#
+# The ring is 100 percent of the DNS queries. Blocked queries fill the ring
+# clockwise from 12 o'clock in one colour, allowed queries fill the rest in
+# another. 9 LEDs = 25 percent, 1 LED = 1/36 of the queries.
+
+template:
+  - triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: time_pattern
+        minutes: "/1"
+    variables:
+      # AdGuard Home sensor with the share of blocked DNS queries, in percent.
+      ratio_entity: sensor.adguard_home_dns_queries_blocked_ratio
+
+      # Which LED sits at 12 o'clock, and whether LED numbers increase
+      # clockwise. Find them with the LED Index Test effect.
+      led_offset: 0
+      clockwise: true
+
+      # Colours as quoted hex codes.
+      blocked_color: "#FF0080"
+      allowed_color: "#00BFFF"
+    sensor:
+      - name: "AdGuard Clock Ring Colors"
+        unique_id: adguard_clock_ring_colors
+        icon: mdi:shield-check
+        availability: >
+          {{ is_number(states(ratio_entity)) }}
+        state: >
+          {%- set ratio = states(ratio_entity) | float(0) -%}
+          {%- set ratio = [[ratio, 0] | max, 100] | min -%}
+          {#- Number of blocked LEDs: share of 36, rounded -#}
+          {%- set blocked = (ratio * 36 / 100) | round(0) | int -%}
+          {%- set b = blocked_color | string | replace('#', '') -%}
+          {%- set a = allowed_color | string | replace('#', '') -%}
+          {%- set o = namespace(s='') -%}
+          {%- for i in range(36) -%}
+            {#- Place of this LED on the face, 0 at 12 o'clock -#}
+            {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
+            {%- set o.s = o.s ~ (b if pos < blocked else a) -%}
+          {%- endfor -%}
+          {{ o.s | upper }}

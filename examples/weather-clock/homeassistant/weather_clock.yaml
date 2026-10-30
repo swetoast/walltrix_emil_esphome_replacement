@@ -5,14 +5,12 @@
 #
 # Uses only what a default Home Assistant install provides:
 #   weather.forecast_home  Met.no, set up during onboarding
-#   sun.sun                Sun, part of default_config
 #
-# Creates four sensors, each 216 hex characters (36 LEDs x RRGGBB).
+# Creates three sensors, each 216 hex characters (36 LEDs x RRGGBB).
 # The clock's "Ring Mode" select picks which one is shown:
 #   sensor.weather_clock_condition_ring_colors    Condition (sunny, rainy, ...)
 #   sensor.weather_clock_temperature_ring_colors  Temperature
 #   sensor.weather_clock_rain_ring_colors         Rain and snow
-#   sensor.weather_clock_sun_ring_colors          Daylight
 #
 # Everything you are expected to change is in the "variables" section below.
 # docs/guides/02-time-on-the-ring.md explains the time settings.
@@ -94,15 +92,6 @@ template:
         - [5, "#8000FF"]
       # Used instead when it rains at least 0.1 mm and it is 0 C or colder.
       snow_color: "#FFFFFF"
-
-      # Sun ring: one colour per part of the day.
-      #   morning = dawn to sunrise, day = sunrise to sunset,
-      #   evening = sunset to dusk, night = dusk to dawn
-      sun_colors:
-        night: "#001040"
-        morning: "#FF5A1E"
-        day: "#FFB400"
-        evening: "#8C28C8"
     actions:
       - action: weather.get_forecasts
         continue_on_error: true
@@ -296,58 +285,3 @@ template:
           {%- endfor -%}
           {{ o.s }}
           {%- endif -%}
-
-      - name: "Weather Clock Sun Ring Colors"
-        unique_id: weather_clock_sun_ring_colors
-        icon: mdi:weather-sunset
-        availability: >
-          {{ state_attr('sun.sun', 'next_rising') is not none
-             and state_attr('sun.sun', 'next_setting') is not none }}
-        state: >
-          {%- macro scaled(hex, k) -%}
-            {%- set h = hex | string | replace('#', '') -%}
-            {{- '%02X%02X%02X' | format(
-                  ((h[0:2] | int(0, 16)) * k) | int,
-                  ((h[2:4] | int(0, 16)) * k) | int,
-                  ((h[4:6] | int(0, 16)) * k) | int) -}}
-          {%- endmacro -%}
-          {#- Next time each part of the day starts. The same event happens
-              again every 24 hours, close enough for a 36 LED ring. -#}
-          {%- set events = [
-                ('morning', as_timestamp(state_attr('sun.sun', 'next_dawn'), 0)),
-                ('day', as_timestamp(state_attr('sun.sun', 'next_rising'), 0)),
-                ('evening', as_timestamp(state_attr('sun.sun', 'next_setting'), 0)),
-                ('night', as_timestamp(state_attr('sun.sun', 'next_dusk'), 0))
-              ] -%}
-          {#- The face: 12 hours from the last midnight or noon, or 60
-              minutes from the start of this hour -#}
-          {%- set n = now() -%}
-          {%- set now_ts = as_timestamp(n) -%}
-          {%- set ring_s = 3600 if layout == 'minutes' else 43200 -%}
-          {%- set ring_start = as_timestamp(n.replace(minute=0, second=0, microsecond=0)) if layout == 'minutes'
-                else as_timestamp(n.replace(hour=(n.hour // 12) * 12, minute=0, second=0, microsecond=0)) -%}
-          {%- set iv = (interval_minutes | int(60)) * 60 -%}
-          {%- set o = namespace(s='') -%}
-          {%- for i in range(36) -%}
-            {#- Place of this LED on the face, 0 at 12 o'clock -#}
-            {%- set pos = ((i - led_offset) if clockwise else (led_offset - i)) % 36 -%}
-            {#- The interval at this place that has not ended yet -#}
-            {%- set t = ring_start + ((pos * ring_s // 36) // iv) * iv -%}
-            {%- if t + iv <= now_ts -%}{%- set t = t + ring_s -%}{%- endif -%}
-            {%- set is_now = t <= now_ts -%}
-            {#- The current interval looks up now, the others their start -#}
-            {%- set t = now_ts if is_now else t -%}
-            {#- The part of the day that started most recently before t -#}
-            {%- set ph = namespace(best=none, part='night') -%}
-            {%- for part, ts in events -%}
-              {%- if ts > 0 -%}
-                {%- set last = ts + ((t - ts) // 86400) * 86400 -%}
-                {%- if ph.best is none or last > ph.best -%}
-                  {%- set ph.best = last -%}
-                  {%- set ph.part = part -%}
-                {%- endif -%}
-              {%- endif -%}
-            {%- endfor -%}
-            {%- set o.s = o.s ~ scaled(sun_colors[ph.part], 1.0 if is_now else dim_others | float(1)) -%}
-          {%- endfor -%}
-          {{ o.s }}

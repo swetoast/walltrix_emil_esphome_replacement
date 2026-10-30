@@ -74,11 +74,11 @@ text_sensor:
     entity_id: sensor.indoor_ring_colors
 ```
 
-Weather Clock: replace one of the four sources instead, for example the Sun ring:
+Weather Clock: replace one of the three sources instead, for example the Rain ring:
 
 ```yaml
   - platform: homeassistant
-    id: sun_colors
+    id: rain_colors
     entity_id: sensor.indoor_ring_colors
 ```
 

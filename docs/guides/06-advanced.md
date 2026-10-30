@@ -1,6 +1,6 @@
 # Advanced
 
-Optional additions to the clock firmware. None of them need extra hardware. Each section has the YAML to add to the device config (`price-clock.yaml` or `weather-clock.yaml`) and explains how to use it.
+Optional additions to the clock firmware. None of them need extra hardware. Each section has the YAML to add to the device config (for example `price-clock.yaml`) and explains how to use it.
 
 All snippets were checked together with `esphome config` on ESPHome 2026.10.1. They have not all been tested on a running clock. Add one at a time, install, and check that the clock still works before adding the next.
 
@@ -8,7 +8,7 @@ All snippets were checked together with `esphome config` on ESPHome 2026.10.1. T
 
 - **Memory.** The ESP8266 has little RAM. After each addition, watch Free Heap and Largest Free Block on the device page for a day. If they drop a lot, remove what you added last.
 - **Where the YAML goes.** If a snippet starts with a key that already exists in the config, such as `api:`, `button:`, `sensor:` or `effects:`, add only the lines under it to the existing section. Do not create a second `button:` section.
-- **Weather Clock.** The snippets use the Price Clock names. On the Weather Clock, replace `"Price Ring"` with `"Weather Ring"`.
+- **Other clocks.** The snippets use the Price Clock names. On the other clocks, replace `"Price Ring"` with `"Weather Ring"`, `"Sky Ring"` or `"AdGuard Ring"`, and `price_clock` in entity and action names with `weather_clock`, `sky_clock` or `adguard_clock`.
 
 ## Contents
 
@@ -140,7 +140,7 @@ Things to know:
 
 - These effects are not scaled by Ring Brightness. The clock turns the light on at 100 % at boot, which is very bright. Lower the Ring light's brightness in Home Assistant before using them.
 - Auto Brightness and night hours do not affect them.
-- To get the normal ring back, select Price Ring (or Weather Ring) as the effect.
+- To get the normal ring back, select the clock's ring effect again (Price Ring, Weather Ring, Sky Ring or AdGuard Ring).
 
 ## Supply voltage
 
@@ -317,7 +317,7 @@ light:
 - `from` and `to` are LED numbers on the strip (0 to 35), the same numbers the LED Index Test shows. They match the face only if LED 0 sits under 12 and the LEDs are numbered clockwise.
 - The Ring light and the partition light write to the same LEDs, and ESPHome's documentation warns that they can conflict. Price Ring redraws all 36 LEDs every second, so expect it to overwrite the partition while it runs. The documentation suggests marking the original light `internal: true`, but that removes the Ring light, and with it Price Ring, from Home Assistant.
 
-Use this only if you want to drive the ring as separate lights from Home Assistant instead of using Price Ring or Weather Ring.
+Use this only if you want to drive the ring as separate lights from Home Assistant instead of using the clock's ring effect.
 
 ## See also
 

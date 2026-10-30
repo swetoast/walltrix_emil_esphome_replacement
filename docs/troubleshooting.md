@@ -5,7 +5,7 @@
 Work through these in order.
 
 1. **Is it night?** With Auto Brightness on, the ring is dark between Night Start Hour and Night End Hour. Turn Auto Brightness off and set Ring Brightness to 40 to test.
-2. **Is the light on?** `light.<clock>_ring` must be on, at 100 % brightness, with Price Ring or Weather Ring as effect.
+2. **Is the light on?** `light.<clock>_ring` must be on, at 100 % brightness, with the clock's ring effect selected (Price Ring, Weather Ring, Sky Ring or AdGuard Ring).
 3. **Do the LEDs work?** Pick the Rainbow Test effect. If the ring stays dark, see [Rainbow Test is also dark](#rainbow-test-is-also-dark).
 4. **Is there data?** Check `binary_sensor.<clock>_ring_data_valid`. If it is off, the colour sensor in Home Assistant has no valid value: see [Ring Data Valid is off](#ring-data-valid-is-off).
 5. **Are the colours too dark?** At low Ring Brightness, dark colours such as `#001040` round down to nearly off. See [Colours](guides/03-colours.md#colours-that-do-not-look-right).
@@ -19,8 +19,10 @@ The clock has not received a full 216 character colour string.
 - If it is `unavailable`, its data source is missing:
   - Price Clock: check `price_entity` exists and has a `today` attribute.
   - Weather Clock: check `weather_entity` exists. Met.no may name it something other than `weather.forecast_home`.
+  - Sky Clock: the Moon ring needs the Moon integration (`sensor.moon_phase`).
+  - AdGuard Clock: check `ratio_entity` exists. With two AdGuard Home servers, the second one's sensor ends in `_2`.
 - Settings > System > Logs: template errors name the sensor and the line.
-- Weather Clock: check Ring Mode. Each mode reads its own sensor.
+- Weather Clock and Sky Clock: check Ring Mode. Each mode reads its own sensor.
 
 ## Ring Data Age keeps rising
 
@@ -52,7 +54,7 @@ The package's `led_offset` or `clockwise` does not match your clock. Use the LED
 ## The clock is not discovered
 
 - Check `wifi_ssid` and `wifi_password` in `secrets.yaml`.
-- If the clock cannot join WiFi it opens the `Price Clock Setup` or `Weather Clock Setup` hotspot. Connect with `ap_password` and enter WiFi details there.
+- If the clock cannot join WiFi it opens the `Price Clock Setup` or `Weather Clock Setup` hotspot (`Sky Clock Setup` and `AdGuard Clock Setup` for the other two). Connect with `ap_password` and enter WiFi details there.
 - The ESP8266 only supports 2.4 GHz WiFi.
 
 ## Home Assistant asks for an encryption key

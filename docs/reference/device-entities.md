@@ -1,19 +1,20 @@
 # Device entities
 
-Every entity the firmware creates. Entity IDs are prefixed with the device's friendly name: `price_clock_` for the Price Clock, `weather_clock_` for the Weather Clock. The tables use `<clock>` for that prefix.
+Every entity the firmware creates. Entity IDs are prefixed with the device's friendly name: `price_clock_`, `weather_clock_`, `sky_clock_` or `adguard_clock_`. The tables use `<clock>` for that prefix.
 
 ## Controls
 
 | Entity | Type | Range or options | Default | Saved | Description |
 |---|---|---|---|---|---|
-| `light.<clock>_ring` | Light | on/off, brightness, effect | on, 100 %, Price Ring or Weather Ring | no | The LED ring. Always turns on at boot. |
+| `light.<clock>_ring` | Light | on/off, brightness, effect | on, 100 %, the clock's ring effect | no | The LED ring. Always turns on at boot. |
 | `number.<clock>_ring_brightness` | Number | 0 to 90 | 40 | yes | Scales colours by value / 255. Set by Auto Brightness when it is on. |
 | `switch.<clock>_auto_brightness` | Switch | on/off | on | yes | Follows the sun and applies night hours |
 | `number.<clock>_night_start_hour` | Number | 0 to 23 | 23 | yes | Ring dark from this hour |
 | `number.<clock>_night_end_hour` | Number | 0 to 23 | 6 | yes | Ring lights from this hour |
 | `number.<clock>_auto_brightness_min` | Number | 0 to 90 | 10 | yes | Ring Brightness in the dark |
 | `number.<clock>_auto_brightness_max` | Number | 0 to 90 | 90 | yes | Ring Brightness in full daylight |
-| `select.weather_clock_ring_mode` | Select | Condition, Temperature, Rain, Sun | Condition | yes | Weather Clock only. Which ring to show. |
+| `select.weather_clock_ring_mode` | Select | Condition, Temperature, Rain | Condition | yes | Weather Clock only. Which ring to show. |
+| `select.sky_clock_ring_mode` | Select | Sun, Moon | Sun | yes | Sky Clock only. Which ring to show. |
 | `button.<clock>_restart` | Button | | | | Restarts the clock |
 | `button.<clock>_restart_safe_mode` | Button | | | | Restarts into safe mode, which only waits for an OTA update. Use it if a bad update keeps crashing the clock. |
 
@@ -25,6 +26,8 @@ Saved values survive a restart. They survive a power cut only with `restore_from
 |---|---|---|
 | Price Ring | Price Clock | Colours from `sensor.price_clock_ring_colors` |
 | Weather Ring | Weather Clock | Colours from the sensor chosen by Ring Mode |
+| Sky Ring | Sky Clock | Colours from the sensor chosen by Ring Mode |
+| AdGuard Ring | AdGuard Clock | Colours from `sensor.adguard_clock_ring_colors` |
 | Rainbow Test | Both | Moving rainbow on all LEDs, for checking the hardware |
 | LED Index Test | Both | LED 0 white, LED 1 red, LED 2 green, rest off. For finding `led_offset` and `clockwise` |
 
