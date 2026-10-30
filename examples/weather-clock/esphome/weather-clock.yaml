@@ -1,4 +1,4 @@
-# Weather Clock: ESPHome firmware for the EMIL ring clock
+# Weather Clock: ESPHome firmware for the Walltrix Emil wall clock
 #
 # Draws one of four rings made by the Home Assistant package
 # homeassistant/weather_clock.yaml. The Ring Mode select picks which:

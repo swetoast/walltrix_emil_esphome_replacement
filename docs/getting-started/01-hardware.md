@@ -1,6 +1,6 @@
 # 1. Hardware
 
-The firmware targets the EMIL wall clock. Opening the clock is not needed: everything, including the first flash, goes through its micro-USB port.
+The firmware targets the Walltrix Emil wall clock. Opening the clock is not needed: everything, including the first flash, goes through its micro-USB port.
 
 ## Components
 

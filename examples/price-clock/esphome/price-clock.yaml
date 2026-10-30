@@ -1,4 +1,4 @@
-# Price Clock: ESPHome firmware for the EMIL ring clock
+# Price Clock: ESPHome firmware for the Walltrix Emil wall clock
 #
 # Draws the 36 colours from sensor.price_clock_ring_colors, made by the
 # Home Assistant package homeassistant/price_clock.yaml.
