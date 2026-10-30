@@ -1,6 +1,6 @@
-# EMIL ring clock: local ESPHome firmware
+# Walltrix Emil Clock: ESPHome firmware replacement
 
-Replacement firmware for the EMIL wall clock and its ring of 36 LEDs. The clock runs ESPHome and gets everything it shows from your own Home Assistant over the local network. It uses no cloud service and has no hardcoded credentials.
+Replacement firmware for the Walltrix Emil clock and its ring of 36 LEDs. The clock runs ESPHome and gets everything it shows from your own Home Assistant over the local network. 
 
 Home Assistant works out one colour per LED and the clock draws them. What the ring means (prices, weather, daylight, anything else) is decided by a Home Assistant package, so you can change it without touching the firmware.
 
