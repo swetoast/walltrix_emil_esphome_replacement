@@ -44,7 +44,7 @@ template:
 
       # Brightness of every LED outside the current interval.
       # 1.0 = no dimming, 0.4 = 40 percent.
-      dim_others: 1
+      dim_others: 0.4
 
       # Colour for intervals beyond the end of the forecast.
       no_data_color: "#000000"
@@ -53,45 +53,71 @@ template:
       # Conditions not listed use unknown_condition_color.
       condition_colors:
         sunny: "#FFD700"
-        clear-night: "#333333"
-        partlycloudy: "#edecc7"
-        cloudy: "#83888c"
-        fog: "#d5d5d8"
+        clear-night: "#0F2043"
+        partlycloudy: "#C8E1FF"
+        cloudy: "#708090"
+        fog: "#BEBECD"
         rainy: "#1E90FF"
-        pouring: "#4589fd"
-        snowy: "#f8fcff"
-        snowy-rainy: "#f5faff"
-        hail: "#cfe2f3"
-        lightning: "#ff1414"
-        lightning-rainy: "#fa8279"
-        windy: "#7d4bf5"
-        windy-variant: "#7d4bf5"
-        exceptional: "#50ff00"
+        pouring: "#0000CD"
+        snowy: "#F0F8FF"
+        snowy-rainy: "#AA82E6"
+        hail: "#DDA0DD"
+        lightning: "#FF1493"
+        lightning-rainy: "#4B0082"
+        windy: "#40E0D0"
+        windy-variant: "#008B8B"
+        exceptional: "#FF4500"
       unknown_condition_color: "#646464"
 
       # Temperature ring: degrees C mapped to a colour. Temperatures between
       # two steps are blended. Values must go from low to high.
       temperature_colors:
-        - [-15, "#4000FF"]
-        - [-5, "#0060FF"]
-        - [0, "#00C0FF"]
-        - [5, "#00FFA0"]
-        - [10, "#40FF00"]
-        - [15, "#C0FF00"]
-        - [20, "#FFC000"]
-        - [25, "#FF6000"]
-        - [30, "#FF0000"]
+        - [-15, "#E4F0FF"]
+        - [-12.5, "#DAE9FF"]
+        - [-10, "#CEE4FF"]
+        - [-7.5, "#C1DBFF"]
+        - [-5, "#B2D2FF"]
+        - [-2.5, "#A9CDFF"]
+        - [0, "#9DC4FF"]
+        - [2.5, "#8BB6FF"]
+        - [5, "#77A9FF"]
+        - [7.5, "#5F9AFF"]
+        - [10, "#4EB0FF"]
+        - [12.5, "#3CD2E6"]
+        - [15, "#3CFFA0"]
+        - [17.5, "#40FF40"]
+        - [20, "#A8FF3C"]
+        - [22.5, "#FFD060"]
+        - [25, "#FF7A50"]
+        - [27.5, "#FF3A6A"]
+        - [30, "#FF085C"]
 
       # Rain ring: precipitation in mm per hour. Each LED takes the colour of
       # the highest step it reaches (no blending). Values go from low to high.
+      # Hours with less than the first step use dry_color.
+      dry_color: "#0A0A0A"
+      # Rain: blue, lighter for drizzle, deeper for heavy rain.
       rain_colors:
-        - [0, "#0A0A0A"]
-        - [0.1, "#60A0FF"]
-        - [0.5, "#2060FF"]
-        - [2, "#0020FF"]
-        - [5, "#8000FF"]
-      # Used instead when it rains at least 0.1 mm and it is 0 C or colder.
-      snow_color: "#FFFFFF"
+        - [0.1, "#B2D2FF"]
+        - [0.5, "#7BAEFF"]
+        - [1, "#4E8CFF"]
+        - [2.5, "#1F5CFF"]
+        - [5, "#0030FF"]
+        - [10, "#0000E0"]
+      # Snow: white, brighter the more it snows. Used when the forecast says
+      # snowy, or when it is 0 C or colder.
+      snow_colors:
+        - [0.1, "#707070"]
+        - [0.5, "#A0A0A0"]
+        - [1, "#D0D0D0"]
+        - [2.5, "#FFFFFF"]
+      # Sleet and hail: between blue and white. Used when the forecast says
+      # snowy-rainy or hail.
+      sleet_colors:
+        - [0.1, "#7088A8"]
+        - [0.5, "#98B4D8"]
+        - [1, "#C0D8FF"]
+        - [2.5, "#E0ECFF"]
     actions:
       - action: weather.get_forecasts
         continue_on_error: true
@@ -271,15 +297,20 @@ template:
             {%- else -%}
               {%- set mm = fc[hit.idx].precipitation | float(0) -%}
               {%- set temp = fc[hit.idx].temperature | float(5) -%}
-              {%- set step = namespace(hex=rain_colors[0][1]) -%}
-              {%- for r in rain_colors -%}
+              {%- set cond = fc[hit.idx].condition | default('') -%}
+              {#- Sleet or hail, snow, or rain -#}
+              {%- if cond in ['snowy-rainy', 'hail'] -%}
+                {%- set steps = sleet_colors -%}
+              {%- elif cond == 'snowy' or temp <= 0 -%}
+                {%- set steps = snow_colors -%}
+              {%- else -%}
+                {%- set steps = rain_colors -%}
+              {%- endif -%}
+              {%- set step = namespace(hex=dry_color) -%}
+              {%- for r in steps -%}
                 {%- if mm >= r[0] -%}{%- set step.hex = r[1] -%}{%- endif -%}
               {%- endfor -%}
-              {%- if mm >= 0.1 and temp <= 0 -%}
-                {%- set col = snow_color -%}
-              {%- else -%}
-                {%- set col = step.hex -%}
-              {%- endif -%}
+              {%- set col = step.hex -%}
             {%- endif -%}
             {%- set o.s = o.s ~ scaled(col, 1.0 if is_now else dim_others | float(1)) -%}
           {%- endfor -%}
